@@ -11,7 +11,7 @@
 * [Twitter](https://twitter.com/RichyRRoy?t=191CQwarznKEuoJ7T6tN_Q&s=09)
 * [Email](dovinorbert@gmail.com)
 
-[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Lordwill1&layout=compact)](https://github.com/Lordwill1/github-readme-stats)
+[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Norber01&layout=compact)](https://github.com/Norber01/github-readme-stats)
 
 ## QUESTION AND ANSWER WEBSITE 
 * [Stackoverflow](https://Stackoverflow.com/)
