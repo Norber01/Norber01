@@ -1,7 +1,7 @@
 # [![TypingSVG](https://readme-typing-svg.demolab.com?lines=Hey!+You+Are+Welcome+To+My+Profile;My+Name+Is+NORBERT+MCK;I+Am+Passionate+About+Coding;I+Learn+By+Doing)](https://git.io/typing-svg)
 # Hi I'm Norbert.👋
 
-### I am a Software Engineering student at ALX. `I learn by doing....`
+### I am a Software Engineer. `I learn by doing....`
 
 - #### 🔭 I’m currently working on my coding skills.
 - #### 👯 I’m open to collaborate on Software Engineering projects.
