@@ -24,7 +24,15 @@ works out the totals for you.
 
 ## Logins
 
-The first time the app opens, the general manager sets a password for each login.
+Everyone opens the same link, which goes straight to the login page:
+
+`https://norber01.github.io/Norber01/poultry-tracker/`
+
+Pick **General Manager**, **Sales Manager** or **Guest** and type that login's password. The general manager
+and sales manager names are filled in automatically; guests type their own name. Passwords are built into
+the app, so no device needs setting up. Only the general manager can see or change passwords, in
+**Settings → Passwords** (a change applies on the device where it was made). Closing the app or tab logs
+you out, so the next person always starts at the login page.
 
 | Login | Can do |
 |---|---|

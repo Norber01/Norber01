@@ -12,29 +12,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="logged-out">
-  <!-- LOGIN / FIRST-TIME SETUP -->
+  <!-- LOGIN -->
   <div id="loginScreen" class="login">
     <div class="login-box">
       <img src="icon.svg" alt="" width="56" height="56">
       <h1 id="loginFarm">Poultry Tracker</h1>
 
-      <form id="setupForm" hidden>
-        <p class="hint">First time here. The general manager sets a password for each login.</p>
-        <label class="field"><span>General manager password</span><input type="password" name="gm" required minlength="4" autocomplete="new-password"></label>
-        <label class="field"><span>Sales manager password</span><input type="password" name="sales" required minlength="4" autocomplete="new-password"></label>
-        <label class="field"><span>Guest password</span><input type="password" name="guest" required minlength="4" autocomplete="new-password"></label>
-        <p class="hint">Passwords need at least 4 characters. Write them down. You can change them later in Settings.</p>
-        <button type="submit" class="btn primary wide">Save passwords</button>
-      </form>
-
-      <form id="loginForm" hidden>
+      <form id="loginForm">
         <p class="hint">Who is logging in?</p>
         <div class="role-pick">
           <label><input type="radio" name="role" value="gm" checked><span>General<br>Manager</span></label>
           <label><input type="radio" name="role" value="sales"><span>Sales<br>Manager</span></label>
           <label><input type="radio" name="role" value="guest"><span>Guest</span></label>
         </div>
-        <label class="field"><span>Your name (shown on your comments)</span><input type="text" name="name" autocomplete="name" placeholder="e.g. Norbert"></label>
+        <label class="field"><span>Your name (shown on your comments)</span><input type="text" name="name" autocomplete="name" placeholder="Type your name"></label>
         <label class="field"><span>Password</span><input type="password" name="password" required autocomplete="current-password"></label>
         <p class="login-error" id="loginError" role="alert"></p>
         <button type="submit" class="btn primary wide">Log in</button>

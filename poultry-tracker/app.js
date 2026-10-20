@@ -24,7 +24,8 @@
   const SETTINGS_KEY = 'poultry.settings.v1';
   const PARTNERS_KEY = 'poultry.partners.v1';
   const COMMENTS_KEY = 'poultry.comments.v1';
-  const USERS_KEY = 'poultry.users.v1';
+  // v1 held passwords made on the old first-time setup screen; they are ignored now.
+  const USERS_KEY = 'poultry.users.v2';
   const SESSION_KEY = 'poultry.session.v1';
 
   const DEFAULT_SETTINGS = {
@@ -37,6 +38,18 @@
     openingEggs: 0,
     openingCash: 0,
   };
+
+  // Built-in logins so every device goes straight to the login page.
+  // Only salted SHA-256 hashes are stored, never the passwords themselves.
+  // The general manager can change a password in Settings (it then applies on that device).
+  const DEFAULT_USERS = {
+    gm: { algo: 'sha256', salt: 'c272c495e3b0d4b500f46ef6', hash: '3f0c31afe0b42932bc27b065ff29663784c03358b670e8616f0c31aa37f0a5dd' },
+    sales: { algo: 'sha256', salt: '04bfc629fbc5e15017ef7cd9', hash: 'b249d355e640e5f3457b6b340862184b7402d7e5c76aa94b7c825c8a5ccb8c99' },
+    guest: { algo: 'sha256', salt: '1dd9df63601d38e26586ae84', hash: '2b27677d8f014722a746ca826d0e611a91cb48b4920e8a59a67138e87e51cec0' },
+  };
+
+  // Names filled in automatically for the two managers; guests type their own.
+  const ROLE_NAMES = { gm: 'Norbert', sales: 'Isaac' };
 
   const ROLES = {
     gm: { label: 'General Manager', perms: ['edit', 'gm'] },
@@ -106,8 +119,20 @@
   let records = load(RECORDS_KEY, []);
   let partnerData = load(PARTNERS_KEY, null) || JSON.parse(JSON.stringify(SEED_PARTNERS));
   let comments = load(COMMENTS_KEY, []);
-  let users = load(USERS_KEY, null);
-  let session = load(SESSION_KEY, null);
+  let users = Object.assign({}, DEFAULT_USERS, load(USERS_KEY, {}));
+  // The login lasts until the app or tab is closed, so the next person always starts at the login page.
+  let session = loadSession();
+
+  function loadSession() {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
+  }
+
+  function saveSession(value) {
+    try {
+      if (value) sessionStorage.setItem(SESSION_KEY, JSON.stringify(value));
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch (e) { /* the login then lasts only until the page reloads */ }
+  }
 
   function persist() {
     save(RECORDS_KEY, records);
@@ -235,18 +260,28 @@
   function showLogin() {
     document.body.className = 'logged-out';
     $('#loginFarm').textContent = settings.farmName || 'Poultry Tracker';
-    $('#setupForm').hidden = !!users;
-    $('#loginForm').hidden = !users;
     $('#loginError').textContent = '';
     const f = $('#loginForm');
     f.elements.password.value = '';
     const last = load(SESSION_KEY + '.last', null);
     if (last) {
-      f.elements.name.value = last.name || '';
       const radio = f.querySelector('input[value="' + last.role + '"]');
       if (radio) radio.checked = true;
     }
+    fillLoginName(last && last.role === 'guest' ? last.name : '');
   }
+
+  function fillLoginName(guestName) {
+    const f = $('#loginForm');
+    const role = f.elements.role.value;
+    f.elements.name.value = ROLE_NAMES[role] || guestName || '';
+    f.elements.name.readOnly = !!ROLE_NAMES[role];
+    f.elements.name.placeholder = ROLE_NAMES[role] ? '' : 'Type your name';
+  }
+
+  $('#loginForm').addEventListener('change', e => {
+    if (e.target.name === 'role') fillLoginName('');
+  });
 
   function startSession() {
     document.body.className = '';
@@ -259,27 +294,15 @@
     go('dashboard');
   }
 
-  $('#setupForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target;
-    const pw = { gm: f.elements.gm.value, sales: f.elements.sales.value, guest: f.elements.guest.value };
-    if (new Set(Object.values(pw)).size < 3) {
-      toast('Use a different password for each login');
-      return;
-    }
-    users = {};
-    for (const role of Object.keys(ROLES)) users[role] = await makeLogin(pw[role]);
-    save(USERS_KEY, users);
-    f.reset();
-    showLogin();
-    toast('Passwords saved. Log in as the general manager.');
-  });
-
   $('#loginForm').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target;
     const role = f.elements.role.value;
-    const name = f.elements.name.value.trim();
+    const name = ROLE_NAMES[role] || f.elements.name.value.trim();
+    if (!name) {
+      $('#loginError').textContent = 'Please type your name.';
+      return;
+    }
     try {
       if (!(await checkLogin(role, f.elements.password.value))) {
         $('#loginError').textContent = 'Wrong password for ' + ROLES[role].label + '.';
@@ -290,14 +313,14 @@
       return;
     }
     session = { role, name };
-    save(SESSION_KEY, session);
+    saveSession(session);
     save(SESSION_KEY + '.last', session);
     startSession();
   });
 
   $('#logoutBtn').addEventListener('click', () => {
     session = null;
-    try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
+    saveSession(null);
     showLogin();
   });
 
@@ -1079,7 +1102,7 @@
     records = data.records.filter(r => r && r.date);
     if (data.partners && Array.isArray(data.partners.rows)) partnerData = data.partners;
     comments = Array.isArray(data.comments) ? data.comments : [];
-    if (data.users && data.users.gm) users = data.users;
+    if (data.users && data.users.gm) users = Object.assign({}, DEFAULT_USERS, data.users);
     save(SETTINGS_KEY, settings);
     persist();
     persistPartners();
@@ -1106,7 +1129,7 @@
 
   if (!load(PARTNERS_KEY, null)) persistPartners();
 
-  if (users && session && ROLES[session.role]) startSession();
+  if (session && ROLES[session.role]) startSession();
   else showLogin();
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
