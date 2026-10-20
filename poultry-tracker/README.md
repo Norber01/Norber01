@@ -24,17 +24,15 @@ works out the totals for you.
 
 ## Logins
 
-Share the normal link with everyone. It only ever shows the login page:
+Everyone opens the same link, which goes straight to the login page:
 
 `https://norber01.github.io/Norber01/poultry-tracker/`
 
-Only the general manager uses the **setup link**, once per device, to set the three passwords:
-
-`https://norber01.github.io/Norber01/poultry-tracker/#setup`
-
-After that, the setup link also just shows the login page. Passwords can only be seen and changed by
-the general manager, in **Settings → Passwords**. Closing the app or tab logs you out, so the next
-person always starts at the login page.
+Pick **General Manager**, **Sales Manager** or **Guest** and type that login's password. The general manager
+and sales manager names are filled in automatically; guests type their own name. Passwords are built into
+the app, so no device needs setting up. Only the general manager can see or change passwords, in
+**Settings → Passwords** (a change applies on the device where it was made). Closing the app or tab logs
+you out, so the next person always starts at the login page.
 
 | Login | Can do |
 |---|---|

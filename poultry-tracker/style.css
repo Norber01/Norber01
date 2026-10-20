@@ -396,4 +396,4 @@ body.logged-out .login { display: block; }
 .login-box form[hidden] { display: none; }
 #contribTable td:first-child { white-space: normal; min-width: 110px; max-width: 150px; }
 .toast { z-index: 60; }
-#notSetUp p { margin: 0 0 6px; }
+.login-box input[readonly] { color: var(--muted); }
