@@ -22,11 +22,33 @@ works out the totals for you.
 - **Income Left** = previous income left + sales + money added − feed − other expenses
 - **Remaining Eggs** = previous remaining + eggs collected − (crates sold × 30) − giveaway
 
+## Logins
+
+The first time the app opens, the general manager sets a password for each login.
+
+| Login | Can do |
+|---|---|
+| General manager | Everything: daily records, partner contributions, partners, settings, passwords, backups |
+| Sales manager | Add, edit and delete daily records; view everything; comment |
+| Guest | View everything and comment only |
+
+Everyone can comment on a day's record and on the Partners page. Each comment shows who wrote it.
+
+## Partners
+
+- **Partners' share**: each partner's total contribution and share % (their contributions ÷ all contributions).
+  It starts with the contributions from the partners' sheet (Norbert, Ally, Frank, Isaac, Bernard).
+- **Contributions**: one row per date with one column per partner, as in the sheet. The general manager can
+  add a new contribution when partners invest more, edit or delete one, and add or rename partners.
+- **Partners' income each month**: each month's profit (egg sales − feed − other expenses) is split by
+  each partner's share at the end of that month, so new investment raises a partner's share from that month on.
+
 ## Screens
 
 - **Home**: eggs in stock, cash on hand, the latest day's eggs, average eggs per day, and this month's totals and profit
-- **Records**: the full spreadsheet view, with every orange column; tap a row to edit it
+- **Records**: the full spreadsheet view, with every orange column; tap a row to open it, comment, or edit
 - **Add**: record a day and see the calculated totals before you save
+- **Partners**: shares, contributions and monthly income per partner
 - **Summary**: totals for each month and for all time
 - **Settings**: farm name, currency (GH₵ by default), eggs per crate, default prices, starting balances, number of birds (for laying rate), and backup/import
 
@@ -41,8 +63,13 @@ Dates such as `9/10/26` are read as day/month/year.
 
 ## Your data
 
-Records are saved in the browser on your phone (no account needed, works offline).
+Records are saved in the browser on the device you use (works offline).
 Use **Download backup** regularly, and **Restore backup** to move to another phone.
+
+The logins control who can do what **on that device**. They do not share data between
+phones, and someone who can open the browser's developer tools could get around them.
+Sharing one set of records between several phones needs an online database
+(for example Firebase or Supabase).
 
 ## Running it
 

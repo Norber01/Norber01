@@ -3,23 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#b8860b">
-  <meta name="description" content="Track eggs, sales, feed and expenses for your poultry business.">
+  <meta name="theme-color" content="#c8931a">
+  <meta name="description" content="Track eggs, sales, feed, expenses and partner contributions for your poultry business.">
   <title>Poultry Tracker</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="logged-out">
+  <!-- LOGIN / FIRST-TIME SETUP -->
+  <div id="loginScreen" class="login">
+    <div class="login-box">
+      <img src="icon.svg" alt="" width="56" height="56">
+      <h1 id="loginFarm">Poultry Tracker</h1>
+
+      <form id="setupForm" hidden>
+        <p class="hint">First time here. The general manager sets a password for each login.</p>
+        <label class="field"><span>General manager password</span><input type="password" name="gm" required minlength="4" autocomplete="new-password"></label>
+        <label class="field"><span>Sales manager password</span><input type="password" name="sales" required minlength="4" autocomplete="new-password"></label>
+        <label class="field"><span>Guest password</span><input type="password" name="guest" required minlength="4" autocomplete="new-password"></label>
+        <p class="hint">Passwords need at least 4 characters. Write them down. You can change them later in Settings.</p>
+        <button type="submit" class="btn primary wide">Save passwords</button>
+      </form>
+
+      <form id="loginForm" hidden>
+        <p class="hint">Who is logging in?</p>
+        <div class="role-pick">
+          <label><input type="radio" name="role" value="gm" checked><span>General<br>Manager</span></label>
+          <label><input type="radio" name="role" value="sales"><span>Sales<br>Manager</span></label>
+          <label><input type="radio" name="role" value="guest"><span>Guest</span></label>
+        </div>
+        <label class="field"><span>Your name (shown on your comments)</span><input type="text" name="name" autocomplete="name" placeholder="e.g. Norbert"></label>
+        <label class="field"><span>Password</span><input type="password" name="password" required autocomplete="current-password"></label>
+        <p class="login-error" id="loginError" role="alert"></p>
+        <button type="submit" class="btn primary wide">Log in</button>
+      </form>
+    </div>
+  </div>
+
   <header class="topbar">
     <div class="brand">
       <img src="icon.svg" alt="" width="32" height="32">
       <div>
         <h1 id="farmTitle">Poultry Tracker</h1>
-        <p class="sub">Income &amp; Expenses</p>
+        <p class="sub" id="whoAmI"></p>
       </div>
     </div>
+    <button class="btn small" id="logoutBtn">Log out</button>
   </header>
 
   <main>
@@ -39,9 +70,9 @@
           <span>Month</span>
           <select id="recordsMonth"></select>
         </label>
-        <button class="btn" data-goto="add">+ Add day</button>
+        <button class="btn" data-goto="add" data-perm="edit">+ Add day</button>
       </div>
-      <p class="hint">Tap a row to edit it. Scroll sideways to see every column.</p>
+      <p class="hint">Tap a row to open it and read or add comments. Scroll sideways to see every column.</p>
       <div class="table-wrap">
         <table class="sheet" id="sheetTable">
           <thead>
@@ -71,7 +102,21 @@
       </div>
     </section>
 
-    <!-- ADD / EDIT -->
+    <!-- ONE DAY: details + comments -->
+    <section id="view-detail" class="view">
+      <div class="toolbar">
+        <h2 class="section-title" id="detailTitle">Day</h2>
+        <div class="form-actions">
+          <button class="btn" id="detailEdit" data-perm="edit">Edit</button>
+          <button class="btn" data-goto="records">Back</button>
+        </div>
+      </div>
+      <dl class="detail" id="detailList"></dl>
+      <h2 class="section-title">Comments</h2>
+      <div class="comments" id="detailComments"></div>
+    </section>
+
+    <!-- ADD / EDIT A DAY -->
     <section id="view-add" class="view">
       <form id="entryForm" autocomplete="off">
         <input type="hidden" name="id">
@@ -114,6 +159,74 @@
       </form>
     </section>
 
+    <!-- PARTNERS -->
+    <section id="view-partners" class="view">
+      <h2 class="section-title">Partners' share</h2>
+      <div class="bars" id="shareBars"></div>
+      <p class="hint">Each partner's share is their total contribution divided by everyone's total contributions.</p>
+
+      <div class="toolbar">
+        <h2 class="section-title">Contributions</h2>
+        <button class="btn" data-goto="contribution" data-perm="gm">+ Add contribution</button>
+      </div>
+      <p class="hint" data-perm="gm">Tap a row to edit or delete it.</p>
+      <div class="table-wrap">
+        <table class="sheet" id="contribTable">
+          <thead></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+
+      <h2 class="section-title">Partners' income each month</h2>
+      <p class="hint">Each month's profit (egg sales − feed − other expenses) is shared by each partner's share of contributions at the end of that month. If a partner invests more, their share goes up from that month on.</p>
+      <div class="table-wrap">
+        <table class="sheet" id="incomeTable">
+          <thead></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+
+      <div data-perm="gm">
+        <h2 class="section-title">Manage partners</h2>
+        <form id="partnersForm" class="partners-form">
+          <div id="partnerNames"></div>
+          <label class="field"><span>Add a new partner</span><input type="text" name="newPartner" placeholder="Partner's name"></label>
+          <div class="form-actions"><button type="submit" class="btn primary">Save partners</button></div>
+        </form>
+      </div>
+
+      <h2 class="section-title">Comments</h2>
+      <div class="comments" id="partnerComments"></div>
+    </section>
+
+    <!-- ADD / EDIT A CONTRIBUTION (general manager only) -->
+    <section id="view-contribution" class="view">
+      <form id="contribForm" autocomplete="off">
+        <input type="hidden" name="id">
+        <h2 class="section-title" id="contribTitle">Add contribution</h2>
+        <fieldset>
+          <legend>When</legend>
+          <label class="field"><span>Date</span><input type="date" name="date" required></label>
+          <label class="field"><span>Label (optional)</span><input type="text" name="label" placeholder="e.g. Opening balance"></label>
+        </fieldset>
+        <fieldset id="contribAmounts">
+          <legend>Amount from each partner</legend>
+        </fieldset>
+        <fieldset>
+          <legend>Note</legend>
+          <label class="field"><span>Note (optional)</span><textarea name="note" rows="2"></textarea></label>
+        </fieldset>
+        <div class="preview" id="contribPreview"></div>
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Save</button>
+          <button type="button" class="btn" data-goto="partners">Cancel</button>
+          <button type="button" class="btn danger" id="deleteContrib" hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+
     <!-- SUMMARY -->
     <section id="view-summary" class="view">
       <h2 class="section-title">Monthly summary</h2>
@@ -139,7 +252,7 @@
       <p class="hint">Profit = sales income − feed cost − other expenses. Money added is not counted as profit.</p>
     </section>
 
-    <!-- SETTINGS -->
+    <!-- SETTINGS (general manager only) -->
     <section id="view-settings" class="view">
       <form id="settingsForm">
         <h2 class="section-title">Settings</h2>
@@ -165,14 +278,30 @@
         </div>
       </form>
 
+      <form id="passwordForm">
+        <h2 class="section-title">Passwords</h2>
+        <fieldset>
+          <legend>Change a password</legend>
+          <label class="field"><span>Login</span>
+            <select name="role">
+              <option value="gm">General manager</option>
+              <option value="sales">Sales manager</option>
+              <option value="guest">Guest</option>
+            </select>
+          </label>
+          <label class="field"><span>New password</span><input type="password" name="password" required minlength="4" autocomplete="new-password"></label>
+        </fieldset>
+        <div class="form-actions"><button type="submit" class="btn primary">Change password</button></div>
+      </form>
+
       <h2 class="section-title">Your data</h2>
-      <p class="hint">Records are saved on this phone only. Download a backup often.</p>
+      <p class="hint">Records are saved on this device only. Download a backup often.</p>
       <div class="data-actions">
         <button class="btn" id="exportCsv">Download spreadsheet (CSV)</button>
         <button class="btn" id="exportJson">Download backup</button>
         <label class="btn file-btn">Import CSV from Google Sheets<input type="file" id="importCsv" accept=".csv,text/csv" hidden></label>
         <label class="btn file-btn">Restore backup<input type="file" id="importJson" accept=".json,application/json" hidden></label>
-        <button class="btn danger" id="clearAll">Delete all records</button>
+        <button class="btn danger" id="clearAll">Delete all daily records</button>
       </div>
     </section>
   </main>
@@ -180,9 +309,10 @@
   <nav class="tabbar">
     <button data-goto="dashboard" class="active"><span class="ico">🏠</span>Home</button>
     <button data-goto="records"><span class="ico">📋</span>Records</button>
-    <button data-goto="add" class="add"><span class="ico">＋</span>Add</button>
+    <button data-goto="add" class="add" data-perm="edit"><span class="ico">＋</span>Add</button>
+    <button data-goto="partners"><span class="ico">🤝</span>Partners</button>
     <button data-goto="summary"><span class="ico">📊</span>Summary</button>
-    <button data-goto="settings"><span class="ico">⚙️</span>Settings</button>
+    <button data-goto="settings" data-perm="gm"><span class="ico">⚙️</span>Settings</button>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
