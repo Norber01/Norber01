@@ -18,8 +18,13 @@
       <img src="icon.svg" alt="" width="56" height="56">
       <h1 id="loginFarm">Poultry Tracker</h1>
 
+      <div id="notSetUp" class="hint" hidden>
+        <p>This app hasn't been set up on this device yet.</p>
+        <p>Ask the general manager to set it up.</p>
+      </div>
+
       <form id="setupForm" hidden>
-        <p class="hint">First time here. The general manager sets a password for each login.</p>
+        <p class="hint">General manager setup: set a password for each login. Only the general manager can see or change passwords.</p>
         <label class="field"><span>General manager password</span><input type="password" name="gm" required minlength="4" autocomplete="new-password"></label>
         <label class="field"><span>Sales manager password</span><input type="password" name="sales" required minlength="4" autocomplete="new-password"></label>
         <label class="field"><span>Guest password</span><input type="password" name="guest" required minlength="4" autocomplete="new-password"></label>

@@ -24,7 +24,17 @@ works out the totals for you.
 
 ## Logins
 
-The first time the app opens, the general manager sets a password for each login.
+Share the normal link with everyone. It only ever shows the login page:
+
+`https://norber01.github.io/Norber01/poultry-tracker/`
+
+Only the general manager uses the **setup link**, once per device, to set the three passwords:
+
+`https://norber01.github.io/Norber01/poultry-tracker/#setup`
+
+After that, the setup link also just shows the login page. Passwords can only be seen and changed by
+the general manager, in **Settings → Passwords**. Closing the app or tab logs you out, so the next
+person always starts at the login page.
 
 | Login | Can do |
 |---|---|

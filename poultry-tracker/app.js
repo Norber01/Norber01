@@ -107,7 +107,19 @@
   let partnerData = load(PARTNERS_KEY, null) || JSON.parse(JSON.stringify(SEED_PARTNERS));
   let comments = load(COMMENTS_KEY, []);
   let users = load(USERS_KEY, null);
-  let session = load(SESSION_KEY, null);
+  // The login lasts until the app or tab is closed, so the next person always starts at the login page.
+  let session = loadSession();
+
+  function loadSession() {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
+  }
+
+  function saveSession(value) {
+    try {
+      if (value) sessionStorage.setItem(SESSION_KEY, JSON.stringify(value));
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch (e) { /* the login then lasts only until the page reloads */ }
+  }
 
   function persist() {
     save(RECORDS_KEY, records);
@@ -232,10 +244,18 @@
     return (await hashPassword(password, u.salt, u.algo)) === u.hash;
   }
 
+  // First-time setup only appears on the general manager's setup link (index.html#setup).
+  // Everyone else only ever sees the login form.
+  function isSetupLink() {
+    return /^#setup$/i.test(location.hash);
+  }
+
   function showLogin() {
     document.body.className = 'logged-out';
     $('#loginFarm').textContent = settings.farmName || 'Poultry Tracker';
-    $('#setupForm').hidden = !!users;
+    const setup = !users && isSetupLink();
+    $('#setupForm').hidden = !setup;
+    $('#notSetUp').hidden = !!users || setup;
     $('#loginForm').hidden = !users;
     $('#loginError').textContent = '';
     const f = $('#loginForm');
@@ -259,8 +279,13 @@
     go('dashboard');
   }
 
+  window.addEventListener('hashchange', () => {
+    if (!session) showLogin();
+  });
+
   $('#setupForm').addEventListener('submit', async e => {
     e.preventDefault();
+    if (users) return;
     const f = e.target;
     const pw = { gm: f.elements.gm.value, sales: f.elements.sales.value, guest: f.elements.guest.value };
     if (new Set(Object.values(pw)).size < 3) {
@@ -271,6 +296,7 @@
     for (const role of Object.keys(ROLES)) users[role] = await makeLogin(pw[role]);
     save(USERS_KEY, users);
     f.reset();
+    history.replaceState(null, '', location.pathname + location.search);
     showLogin();
     toast('Passwords saved. Log in as the general manager.');
   });
@@ -290,14 +316,14 @@
       return;
     }
     session = { role, name };
-    save(SESSION_KEY, session);
+    saveSession(session);
     save(SESSION_KEY + '.last', session);
     startSession();
   });
 
   $('#logoutBtn').addEventListener('click', () => {
     session = null;
-    try { localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ }
+    saveSession(null);
     showLogin();
   });
 

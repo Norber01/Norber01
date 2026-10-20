@@ -1,5 +1,5 @@
 // Caches the app so it keeps working without internet.
-const CACHE = 'poultry-tracker-v2';
+const CACHE = 'poultry-tracker-v3';
 const FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon.svg'];
 
 self.addEventListener('install', e => {
