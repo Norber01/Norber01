@@ -134,12 +134,31 @@
     } catch (e) { /* the login then lasts only until the page reloads */ }
   }
 
+  // Set once connected to the online database (see "Online database" below).
+  let online = null;
+
   function persist() {
-    save(RECORDS_KEY, records);
+    if (online) syncCollection('records', records);
+    else save(RECORDS_KEY, records);
   }
 
   function persistPartners() {
-    save(PARTNERS_KEY, partnerData);
+    if (online) {
+      syncMeta('partners', { partners: partnerData.partners });
+      syncCollection('contributions', partnerData.rows);
+    } else {
+      save(PARTNERS_KEY, partnerData);
+    }
+  }
+
+  function persistComments() {
+    if (online) syncCollection('comments', comments);
+    else save(COMMENTS_KEY, comments);
+  }
+
+  function persistSettings() {
+    if (online) syncMeta('settings', settings);
+    else save(SETTINGS_KEY, settings);
   }
 
   // ---------- Helpers ----------
@@ -288,6 +307,11 @@
     document.body.classList.toggle('can-edit', can('edit'));
     document.body.classList.toggle('can-gm', can('gm'));
     $('#whoAmI').textContent = (session.name ? session.name + ' · ' : '') + ROLES[session.role].label;
+    if (online) {
+      startListeners();
+      uploadIfEmpty();
+    }
+    updateSyncStatus();
     fillSettings();
     resetForm();
     render();
@@ -301,16 +325,29 @@
     // Phone keyboards often add a space after a word.
     const password = f.elements.password.value.trim();
     let role = null;
+    const button = f.querySelector('button[type=submit]');
+    button.disabled = true;
     try {
       // Check the login that was picked first, then the others, so a password
       // typed with the wrong button selected still logs in as the right person.
-      for (const r of [picked].concat(Object.keys(ROLES).filter(x => x !== picked))) {
-        if (await checkLogin(r, password)) { role = r; break; }
+      const order = [picked].concat(Object.keys(ROLES).filter(x => x !== picked));
+      if (FIREBASE_CONFIG) {
+        await onlineReady;
+        if (!online) throw new Error('Could not connect to the online database. Check your internet and reload.');
+        for (const r of order) {
+          if (await onlineSignIn(r, password)) { role = r; break; }
+        }
+      } else {
+        for (const r of order) {
+          if (await checkLogin(r, password)) { role = r; break; }
+        }
       }
     } catch (err) {
+      button.disabled = false;
       $('#loginError').textContent = err.message;
       return;
     }
+    button.disabled = false;
     if (!role) {
       $('#loginError').textContent = 'Wrong password. Passwords must match capital and small letters exactly.';
       return;
@@ -333,6 +370,10 @@
   $('#logoutBtn').addEventListener('click', () => {
     session = null;
     saveSession(null);
+    if (online) {
+      stopListeners();
+      online.auth.signOut().catch(() => {});
+    }
     showLogin();
   });
 
@@ -436,6 +477,10 @@
   }
 
   function renderComments(target, el) {
+    // Live updates redraw comments; keep whatever the person is still typing.
+    const typing = el.querySelector('textarea');
+    const draft = typing ? typing.value : '';
+    const hadFocus = typing && document.activeElement === typing;
     const list = commentsFor(target);
     const html = list.map(c => {
       const mine = session && c.role === session.role && c.author === (session.name || '');
@@ -449,6 +494,9 @@
         '<textarea name="text" rows="2" placeholder="Write a comment…" required></textarea>' +
         '<div class="form-actions"><button type="submit" class="btn primary">Post comment</button></div>' +
       '</form>';
+    const box = el.querySelector('textarea');
+    box.value = draft;
+    if (hadFocus) box.focus();
   }
 
   document.addEventListener('submit', e => {
@@ -457,8 +505,12 @@
     e.preventDefault();
     const text = form.elements.text.value.trim();
     if (!text) return;
-    comments.push({ id: uid(), target: form.dataset.target, author: session.name || '', role: session.role, text, time: Date.now() });
-    save(COMMENTS_KEY, comments);
+    comments.push({
+      id: uid(), target: form.dataset.target, author: session.name || '', role: session.role, text, time: Date.now(),
+      uid: online && online.auth.currentUser ? online.auth.currentUser.uid : '',
+    });
+    form.elements.text.value = '';
+    persistComments();
     renderComments(form.dataset.target, form.parentElement);
     render();
     toast('Comment posted');
@@ -470,7 +522,7 @@
     const c = comments.find(x => x.id === btn.dataset.delComment);
     if (!c || !confirm('Delete this comment?')) return;
     comments = comments.filter(x => x.id !== c.id);
-    save(COMMENTS_KEY, comments);
+    persistComments();
     renderComments(c.target, btn.closest('.comments'));
     render();
   });
@@ -676,9 +728,12 @@
 
   let openRecordId = null;
 
-  function openRecord(id) {
+  function openRecord(id, refresh) {
     const r = compute(records).find(x => x.id === id);
-    if (!r) return;
+    if (!r) {
+      if (refresh) go('records');
+      return;
+    }
     openRecordId = id;
     $('#detailTitle').textContent = showDate(r.date);
     const item = (label, value, cls) => '<dt>' + esc(label) + '</dt><dd class="' + (cls || '') + '">' + esc(value) + '</dd>';
@@ -700,7 +755,7 @@
       item('Remaining eggs', fmt(r.remaining, 0), 'cyan') +
       long('Note', r.note);
     renderComments('record:' + id, $('#detailComments'));
-    go('detail');
+    if (!refresh) go('detail');
   }
 
   document.addEventListener('click', e => {
@@ -803,7 +858,7 @@
     records = records.filter(x => x.id !== id);
     comments = comments.filter(c => c.target !== 'record:' + id);
     persist();
-    save(COMMENTS_KEY, comments);
+    persistComments();
     render();
     toast('Record deleted');
     resetForm();
@@ -905,6 +960,7 @@
   const partnersForm = $('#partnersForm');
 
   function renderPartnerNames() {
+    if (partnersForm.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
     $('#partnerNames').innerHTML = partnerData.partners.map(p =>
       '<label class="field"><span>Partner name</span><input type="text" name="name-' + esc(p.id) + '" value="' + esc(p.name) + '" required></label>').join('');
   }
@@ -928,7 +984,8 @@
 
   const settingsForm = $('#settingsForm');
 
-  function fillSettings() {
+  function fillSettings(fromLiveUpdate) {
+    if (fromLiveUpdate && settingsForm.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
     Object.keys(DEFAULT_SETTINGS).forEach(k => {
       settingsForm.elements[k].value = settings[k];
     });
@@ -945,7 +1002,7 @@
     if (!next.eggsPerCrate) next.eggsPerCrate = 30;
     if (!next.currency) next.currency = DEFAULT_SETTINGS.currency;
     settings = next;
-    save(SETTINGS_KEY, settings);
+    persistSettings();
     fillSettings();
     render();
     toast('Settings saved');
@@ -956,10 +1013,19 @@
     if (!can('gm')) return;
     const f = e.target;
     const role = f.elements.role.value;
-    users[role] = await makeLogin(f.elements.password.value);
-    save(USERS_KEY, users);
+    if (online) {
+      try {
+        await changeOnlinePassword(role, f.elements.current.value, f.elements.password.value);
+      } catch (err) {
+        toast(/password|credential/i.test(err.code || '') ? 'The current password is wrong' : 'Could not change the password: ' + err.message);
+        return;
+      }
+    } else {
+      users[role] = await makeLogin(f.elements.password.value);
+      save(USERS_KEY, users);
+    }
     f.reset();
-    toast(ROLES[role].label + ' password changed');
+    toast(ROLES[role].label + ' password changed' + (online ? ' on every phone' : ''));
   });
 
   // ---------- CSV import / export ----------
@@ -1115,10 +1181,10 @@
     if (data.partners && Array.isArray(data.partners.rows)) partnerData = data.partners;
     comments = Array.isArray(data.comments) ? data.comments : [];
     if (data.users && data.users.gm) users = Object.assign({}, DEFAULT_USERS, data.users);
-    save(SETTINGS_KEY, settings);
+    persistSettings();
     persist();
     persistPartners();
-    save(COMMENTS_KEY, comments);
+    persistComments();
     save(USERS_KEY, users);
     fillSettings();
     render();
@@ -1132,17 +1198,306 @@
     records = [];
     comments = comments.filter(c => !c.target.startsWith('record:'));
     persist();
-    save(COMMENTS_KEY, comments);
+    persistComments();
     render();
     toast('All records deleted');
   });
 
+  // ---------- Online database (Firebase) ----------
+  //
+  // When firebase-config.js holds the Firebase project's settings, daily records, contributions,
+  // partners, comments and settings are kept in Firestore. Every logged-in phone listens for
+  // changes, so a sale saved by one manager shows up on everyone's screen within seconds.
+  // Without it, everything stays on this device as before.
+
+  const FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
+
+  // One Firebase account per login. They are created automatically the first time someone
+  // logs in with that login's built-in password.
+  const ROLE_EMAILS = { gm: 'gm@poultry-tracker.app', sales: 'sales@poultry-tracker.app', guest: 'guest@poultry-tracker.app' };
+  // Firebase needs passwords of at least 6 characters, so a fixed ending is added behind the scenes.
+  const PW_SUFFIX = '#poultry';
+
+  let onlineReady = null;
+  let localCopy = null;   // this device's data from before going online, uploaded once by the general manager
+  let listeners = [];
+  let renderQueued = false;
+  let settingsChanged = false;
+  let syncState = 'connecting';
+  // What the database holds, as stable JSON per document, so only real changes are written.
+  const remote = { records: {}, contributions: {}, comments: {}, meta: {} };
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = src;
+      el.onload = resolve;
+      el.onerror = () => reject(new Error('Could not load ' + src));
+      document.head.appendChild(el);
+    });
+  }
+
+  function useEmulators(auth, db) {
+    const emu = window.FIREBASE_EMULATOR;
+    if (!emu) return;
+    if (auth) auth.useEmulator('http://' + emu.auth, { disableWarnings: true });
+    if (db) db.useEmulator(emu.firestoreHost, emu.firestorePort);
+  }
+
+  async function initOnline() {
+    await loadScript('vendor/firebase-app-compat.js?v=10.12.2');
+    await Promise.all([
+      loadScript('vendor/firebase-auth-compat.js?v=10.12.2'),
+      loadScript('vendor/firebase-firestore-compat.js?v=10.12.2'),
+    ]);
+    const app = firebase.initializeApp(FIREBASE_CONFIG);
+    const auth = app.auth();
+    const db = app.firestore();
+    useEmulators(auth, db);
+    // Like the rest of the app, a login lasts until the tab or app is closed.
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    try {
+      // Keeps working without internet and sends the changes when the phone is back online.
+      await db.enablePersistence({ synchronizeTabs: true });
+    } catch (e) { /* not supported in this browser: works while online only */ }
+    await new Promise(resolve => { const off = auth.onAuthStateChanged(() => { off(); resolve(); }); });
+
+    localCopy = { records, partnerData, comments, settings };
+    records = [];
+    partnerData = { partners: [], rows: [] };
+    comments = [];
+    online = { app, auth, db };
+  }
+
+  async function onlineSignIn(role, password) {
+    const email = ROLE_EMAILS[role];
+    const pw = password + PW_SUFFIX;
+    try {
+      await online.auth.signInWithEmailAndPassword(email, pw);
+      return true;
+    } catch (err) {
+      if (err.code === 'auth/network-request-failed') throw new Error('No internet connection. Connect to log in.');
+      if (err.code === 'auth/too-many-requests') throw new Error('Too many tries. Wait a few minutes and try again.');
+      // First login for this role: create its account, but only with the built-in password.
+      if (!(await checkLogin(role, password))) return false;
+      try {
+        await online.auth.createUserWithEmailAndPassword(email, pw);
+        return true;
+      } catch (e2) {
+        if (e2.code === 'auth/email-already-in-use') return false;
+        if (e2.code === 'auth/operation-not-allowed') throw new Error('Turn on Email/Password sign-in in Firebase (see FIREBASE_SETUP.md).');
+        throw e2;
+      }
+    }
+  }
+
+  async function changeOnlinePassword(role, current, next) {
+    // Sign in as that login in a separate, temporary connection so this session stays logged in.
+    const tmp = firebase.initializeApp(FIREBASE_CONFIG, 'password-' + Date.now());
+    try {
+      const auth = tmp.auth();
+      useEmulators(auth, null);
+      await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+      const cred = await auth.signInWithEmailAndPassword(ROLE_EMAILS[role], current.trim() + PW_SUFFIX);
+      await cred.user.updatePassword(next.trim() + PW_SUFFIX);
+    } finally {
+      await tmp.delete();
+    }
+  }
+
+  // JSON with sorted keys, so the same data always gives the same text.
+  function stableJSON(v) {
+    if (Array.isArray(v)) return '[' + v.map(stableJSON).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + stableJSON(v[k])).join(',') + '}';
+    }
+    return JSON.stringify(v === undefined ? null : v);
+  }
+
+  function clean(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function syncError(err) {
+    console.error(err);
+    toast(err && err.code === 'permission-denied' ? 'Your login is not allowed to change that.' : 'Could not save online: ' + ((err && err.message) || err));
+  }
+
+  function commitOps(ops) {
+    for (let i = 0; i < ops.length; i += 400) {
+      const batch = online.db.batch();
+      ops.slice(i, i + 400).forEach(op => (op.del ? batch.delete(op.ref) : batch.set(op.ref, op.data)));
+      batch.commit().catch(syncError);
+    }
+  }
+
+  // Writes the documents in `list` that differ from the database and deletes the ones that are gone.
+  function syncCollection(name, list) {
+    const col = online.db.collection(name);
+    const seen = new Set();
+    const ops = [];
+    list.forEach(item => {
+      seen.add(item.id);
+      const data = clean(item);
+      const json = stableJSON(data);
+      if (remote[name][item.id] !== json) {
+        remote[name][item.id] = json;
+        ops.push({ ref: col.doc(item.id), data });
+      }
+    });
+    Object.keys(remote[name]).forEach(id => {
+      if (!seen.has(id)) {
+        delete remote[name][id];
+        ops.push({ ref: col.doc(id), del: true });
+      }
+    });
+    if (ops.length) commitOps(ops);
+  }
+
+  function syncMeta(id, obj) {
+    const data = clean(obj);
+    const json = stableJSON(data);
+    if (remote.meta[id] === json) return;
+    remote.meta[id] = json;
+    commitOps([{ ref: online.db.collection('meta').doc(id), data }]);
+  }
+
+  function startListeners() {
+    stopListeners();
+    const db = online.db;
+    const watch = (name, apply) => {
+      listeners.push(db.collection(name).onSnapshot({ includeMetadataChanges: true }, snap => {
+        const list = [];
+        const map = {};
+        snap.forEach(d => {
+          const data = Object.assign({}, d.data(), { id: d.id });
+          list.push(data);
+          map[d.id] = stableJSON(clean(data));
+        });
+        remote[name] = map;
+        apply(list);
+        if (name === 'records') {
+          syncState = snap.metadata.hasPendingWrites ? 'saving' : snap.metadata.fromCache ? 'offline' : 'live';
+        }
+        queueRender();
+      }, syncError));
+    };
+    watch('records', list => { records = list; });
+    watch('contributions', list => { partnerData.rows = list; });
+    watch('comments', list => { comments = list; });
+    listeners.push(db.collection('meta').onSnapshot(snap => {
+      snap.forEach(d => {
+        const data = d.data();
+        remote.meta[d.id] = stableJSON(clean(data));
+        if (d.id === 'partners') partnerData.partners = data.partners || [];
+        if (d.id === 'settings') {
+          settings = Object.assign({}, DEFAULT_SETTINGS, data);
+          settingsChanged = true;
+        }
+      });
+      queueRender();
+    }, syncError));
+  }
+
+  function stopListeners() {
+    listeners.forEach(off => off());
+    listeners = [];
+    syncState = 'connecting';
+  }
+
+  function queueRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      if (!session) return;
+      if (settingsChanged) {
+        settingsChanged = false;
+        fillSettings(true);
+      }
+      render();
+      if ($('#view-detail').classList.contains('active') && openRecordId) openRecord(openRecordId, true);
+      updateSyncStatus();
+    });
+  }
+
+  function updateSyncStatus() {
+    const el = $('#syncStatus');
+    if (!FIREBASE_CONFIG) {
+      el.textContent = 'Saved on this phone only';
+      el.className = 'sync local';
+      return;
+    }
+    const text = { connecting: 'Connecting…', saving: 'Saving…', offline: 'Offline – changes will send when back online', live: 'Live' };
+    el.textContent = text[syncState];
+    el.className = 'sync ' + syncState;
+  }
+
+  // The first time the general manager logs in online, this device's records, partners,
+  // contributions, comments and settings are uploaded so everyone starts with them.
+  async function uploadIfEmpty() {
+    if (session.role !== 'gm' || !localCopy) return;
+    const db = online.db;
+    let snaps;
+    try {
+      snaps = await Promise.all([
+        db.collection('meta').doc('partners').get({ source: 'server' }),
+        db.collection('records').get({ source: 'server' }),
+        db.collection('contributions').get({ source: 'server' }),
+        db.collection('comments').get({ source: 'server' }),
+      ]);
+    } catch (e) {
+      return; // offline: try again next login
+    }
+    const [partnersDoc, recordSnap, contribSnap, commentSnap] = snaps;
+    if (partnersDoc.exists) {
+      localCopy = null;
+      return;
+    }
+    const ops = [];
+    const addMissing = (name, snap, list) => {
+      const have = new Set(snap.docs.map(d => d.id));
+      list.forEach(item => {
+        if (!have.has(item.id)) ops.push({ ref: db.collection(name).doc(item.id), data: clean(item) });
+      });
+    };
+    addMissing('records', recordSnap, localCopy.records);
+    addMissing('contributions', contribSnap, localCopy.partnerData.rows);
+    addMissing('comments', commentSnap, localCopy.comments);
+    ops.push({ ref: db.collection('meta').doc('settings'), data: clean(localCopy.settings) });
+    ops.push({ ref: db.collection('meta').doc('partners'), data: clean({ partners: localCopy.partnerData.partners }) });
+    localCopy = null;
+    commitOps(ops);
+    toast('Records and partners are now online for everyone');
+  }
+
   // ---------- Start ----------
 
-  if (!load(PARTNERS_KEY, null)) persistPartners();
+  if (!load(PARTNERS_KEY, null)) save(PARTNERS_KEY, partnerData);
 
-  if (session && ROLES[session.role]) startSession();
-  else showLogin();
+  if (FIREBASE_CONFIG) {
+    document.documentElement.classList.add('online-mode');
+    const resume = session;
+    session = null;
+    showLogin();
+    onlineReady = initOnline().then(() => {
+      // Pick up a login from earlier in this tab (e.g. after a reload).
+      const user = online.auth.currentUser;
+      if (resume && ROLES[resume.role] && user && user.email === ROLE_EMAILS[resume.role]) {
+        session = resume;
+        startSession();
+      } else {
+        saveSession(null);
+      }
+    }).catch(err => {
+      console.error(err);
+      $('#loginError').textContent = 'Could not connect to the online database: ' + err.message;
+    });
+  } else if (session && ROLES[session.role]) {
+    startSession();
+  } else {
+    showLogin();
+  }
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register('sw.js').catch(() => {});

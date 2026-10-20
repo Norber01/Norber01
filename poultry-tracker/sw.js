@@ -1,6 +1,9 @@
 // Caches the app so it keeps working without internet.
-const CACHE = 'poultry-tracker-v5';
-const FILES = ['./', 'index.html', 'style.css?v=5', 'app.js?v=5', 'manifest.json', 'icon.svg'];
+const CACHE = 'poultry-tracker-v6';
+const FILES = [
+  './', 'index.html', 'style.css?v=6', 'app.js?v=6', 'firebase-config.js?v=6', 'manifest.json', 'icon.svg',
+  'vendor/firebase-app-compat.js?v=10.12.2', 'vendor/firebase-auth-compat.js?v=10.12.2', 'vendor/firebase-firestore-compat.js?v=10.12.2',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -16,7 +19,8 @@ self.addEventListener('activate', e => {
 
 // Network first so updates show up, falling back to the cache when offline.
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  // Only this app's own files; Firebase's live connection must go straight to the network.
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     // no-cache: always ask the server for the newest files instead of the browser's copy.
     fetch(e.request, { cache: 'no-cache' })

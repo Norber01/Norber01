@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body class="logged-out">
   <!-- LOGIN -->
@@ -39,6 +39,7 @@
       <div>
         <h1 id="farmTitle">Poultry Tracker</h1>
         <p class="sub" id="whoAmI"></p>
+        <p class="sync" id="syncStatus" role="status"></p>
       </div>
     </div>
     <button class="btn small" id="logoutBtn">Log out</button>
@@ -280,6 +281,7 @@
               <option value="guest">Guest</option>
             </select>
           </label>
+          <label class="field" data-online><span>Current password for that login</span><input type="password" name="current" autocomplete="off" autocapitalize="off"></label>
           <label class="field"><span>New password</span><input type="password" name="password" required minlength="4" autocomplete="new-password"></label>
         </fieldset>
         <div class="form-actions"><button type="submit" class="btn primary">Change password</button></div>
@@ -308,6 +310,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=5"></script>
+  <script src="firebase-config.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

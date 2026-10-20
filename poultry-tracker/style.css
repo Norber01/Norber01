@@ -397,3 +397,14 @@ body.logged-out .login { display: block; }
 #contribTable td:first-child { white-space: normal; min-width: 110px; max-width: 150px; }
 .toast { z-index: 60; }
 .login-box input[readonly] { color: var(--muted); }
+
+/* ---------- Online / live status ---------- */
+html:not(.online-mode) [data-online] { display: none; }
+.sync { margin: 2px 0 0; font-size: .75rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.sync::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.sync.live { color: #0f5a2a; }
+.sync.saving, .sync.connecting { color: #5a4300; }
+.sync.offline { color: #7a1c12; }
+.sync.local { color: rgba(27,20,5,.7); }
+.sync.local::before { display: none; }
+.btn:disabled { opacity: .6; cursor: progress; }
