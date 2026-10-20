@@ -297,19 +297,31 @@
   $('#loginForm').addEventListener('submit', async e => {
     e.preventDefault();
     const f = e.target;
-    const role = f.elements.role.value;
-    const name = ROLE_NAMES[role] || f.elements.name.value.trim();
-    if (!name) {
-      $('#loginError').textContent = 'Please type your name.';
-      return;
-    }
+    const picked = f.elements.role.value;
+    // Phone keyboards often add a space after a word.
+    const password = f.elements.password.value.trim();
+    let role = null;
     try {
-      if (!(await checkLogin(role, f.elements.password.value))) {
-        $('#loginError').textContent = 'Wrong password for ' + ROLES[role].label + '.';
-        return;
+      // Check the login that was picked first, then the others, so a password
+      // typed with the wrong button selected still logs in as the right person.
+      for (const r of [picked].concat(Object.keys(ROLES).filter(x => x !== picked))) {
+        if (await checkLogin(r, password)) { role = r; break; }
       }
     } catch (err) {
       $('#loginError').textContent = err.message;
+      return;
+    }
+    if (!role) {
+      $('#loginError').textContent = 'Wrong password. Passwords must match capital and small letters exactly.';
+      return;
+    }
+    const name = ROLE_NAMES[role] || (role === picked ? f.elements.name.value.trim() : '');
+    if (!name) {
+      const radio = f.querySelector('input[value="' + role + '"]');
+      if (radio) radio.checked = true;
+      fillLoginName('');
+      $('#loginError').textContent = 'That is the ' + ROLES[role].label + ' password. Please type your name.';
+      f.elements.name.focus();
       return;
     }
     session = { role, name };
