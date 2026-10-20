@@ -1,0 +1,13 @@
+{
+  "name": "Poultry Tracker",
+  "short_name": "Poultry",
+  "description": "Track eggs, sales, feed and expenses for your poultry business.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#15130f",
+  "theme_color": "#c8931a",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b8860b">
+  <meta name="description" content="Track eggs, sales, feed and expenses for your poultry business.">
+  <title>Poultry Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="32" height="32">
+      <div>
+        <h1 id="farmTitle">Poultry Tracker</h1>
+        <p class="sub">Income &amp; Expenses</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div class="cards" id="statCards"></div>
+      <h2 class="section-title">This month</h2>
+      <div class="cards" id="monthCards"></div>
+      <h2 class="section-title">Recent days</h2>
+      <div id="recentList" class="recent"></div>
+    </section>
+
+    <!-- RECORDS (mirrors the spreadsheet) -->
+    <section id="view-records" class="view">
+      <div class="toolbar">
+        <label class="field inline">
+          <span>Month</span>
+          <select id="recordsMonth"></select>
+        </label>
+        <button class="btn" data-goto="add">+ Add day</button>
+      </div>
+      <p class="hint">Tap a row to edit it. Scroll sideways to see every column.</p>
+      <div class="table-wrap">
+        <table class="sheet" id="sheetTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>No. of Eggs</th>
+              <th>Total Crate</th>
+              <th>Price per Crate</th>
+              <th>No. of Crate Sold</th>
+              <th>Total</th>
+              <th>Income Generated</th>
+              <th>No. of Feed Bought</th>
+              <th>Price per Bag</th>
+              <th>Total</th>
+              <th>Note</th>
+              <th>Money Added</th>
+              <th>Other Expenses</th>
+              <th>Amount</th>
+              <th>Income Left</th>
+              <th>Eggs Giveaway</th>
+              <th>Remaining Eggs</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- ADD / EDIT -->
+    <section id="view-add" class="view">
+      <form id="entryForm" autocomplete="off">
+        <input type="hidden" name="id">
+        <h2 class="section-title" id="formTitle">Add a day</h2>
+
+        <fieldset>
+          <legend>Eggs</legend>
+          <label class="field"><span>Date</span><input type="date" name="date" required></label>
+          <label class="field"><span>No. of eggs collected</span><input type="number" name="eggs" min="0" step="1" inputmode="numeric"></label>
+          <label class="field"><span>Eggs giveaway</span><input type="number" name="giveaway" min="0" step="1" inputmode="numeric"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Sales</legend>
+          <label class="field"><span>Price per crate</span><input type="number" name="cratePrice" min="0" step="any" inputmode="decimal"></label>
+          <label class="field"><span>No. of crates sold</span><input type="number" name="cratesSold" min="0" step="any" inputmode="decimal"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Feed</legend>
+          <label class="field"><span>No. of feed bags bought</span><input type="number" name="feedBags" min="0" step="any" inputmode="decimal"></label>
+          <label class="field"><span>Price per bag</span><input type="number" name="bagPrice" min="0" step="any" inputmode="decimal"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Other money</legend>
+          <label class="field"><span>Other expense (what for)</span><input type="text" name="expenseDesc" placeholder="e.g. fuel for bike"></label>
+          <label class="field"><span>Expense amount</span><input type="number" name="expenseAmt" min="0" step="any" inputmode="decimal"></label>
+          <label class="field"><span>Money added to the business</span><input type="number" name="cashAdded" min="0" step="any" inputmode="decimal"></label>
+          <label class="field"><span>Note</span><textarea name="note" rows="2" placeholder="e.g. 700gh added to buy feed and hygiene items"></textarea></label>
+        </fieldset>
+
+        <div class="preview" id="formPreview"></div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Save</button>
+          <button type="button" class="btn" id="cancelEdit">Cancel</button>
+          <button type="button" class="btn danger" id="deleteEntry" hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- SUMMARY -->
+    <section id="view-summary" class="view">
+      <h2 class="section-title">Monthly summary</h2>
+      <div class="table-wrap">
+        <table class="sheet" id="summaryTable">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Eggs Collected</th>
+              <th>Crates Sold</th>
+              <th>Sales Income</th>
+              <th>Feed Cost</th>
+              <th>Other Expenses</th>
+              <th>Money Added</th>
+              <th>Profit</th>
+              <th>Eggs Giveaway</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+      <p class="hint">Profit = sales income − feed cost − other expenses. Money added is not counted as profit.</p>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view">
+      <form id="settingsForm">
+        <h2 class="section-title">Settings</h2>
+        <fieldset>
+          <legend>Farm</legend>
+          <label class="field"><span>Farm name</span><input type="text" name="farmName" placeholder="My Poultry Farm"></label>
+          <label class="field"><span>Currency symbol</span><input type="text" name="currency" maxlength="6"></label>
+          <label class="field"><span>Number of laying birds (optional)</span><input type="number" name="birds" min="0" step="1" inputmode="numeric"></label>
+          <label class="field"><span>Eggs per crate</span><input type="number" name="eggsPerCrate" min="1" step="1" inputmode="numeric"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Defaults for new days</legend>
+          <label class="field"><span>Price per crate</span><input type="number" name="defaultCratePrice" min="0" step="any" inputmode="decimal"></label>
+          <label class="field"><span>Price per feed bag</span><input type="number" name="defaultBagPrice" min="0" step="any" inputmode="decimal"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Starting balances</legend>
+          <label class="field"><span>Eggs in stock before first record</span><input type="number" name="openingEggs" min="0" step="1" inputmode="numeric"></label>
+          <label class="field"><span>Cash on hand before first record</span><input type="number" name="openingCash" step="any" inputmode="decimal"></label>
+        </fieldset>
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Save settings</button>
+        </div>
+      </form>
+
+      <h2 class="section-title">Your data</h2>
+      <p class="hint">Records are saved on this phone only. Download a backup often.</p>
+      <div class="data-actions">
+        <button class="btn" id="exportCsv">Download spreadsheet (CSV)</button>
+        <button class="btn" id="exportJson">Download backup</button>
+        <label class="btn file-btn">Import CSV from Google Sheets<input type="file" id="importCsv" accept=".csv,text/csv" hidden></label>
+        <label class="btn file-btn">Restore backup<input type="file" id="importJson" accept=".json,application/json" hidden></label>
+        <button class="btn danger" id="clearAll">Delete all records</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-goto="dashboard" class="active"><span class="ico">🏠</span>Home</button>
+    <button data-goto="records"><span class="ico">📋</span>Records</button>
+    <button data-goto="add" class="add"><span class="ico">＋</span>Add</button>
+    <button data-goto="summary"><span class="ico">📊</span>Summary</button>
+    <button data-goto="settings"><span class="ico">⚙️</span>Settings</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
