@@ -57,6 +57,8 @@
       background: var(--orange); color: var(--orange-ink);
     }
     .btn.wa { background: #25d366; color: #062b14; }
+    #contact { display: flex; flex-direction: column; gap: 12px; }
+    .number { color: var(--muted); font-size: .9rem; margin: 0 0 6px; font-variant-numeric: tabular-nums; }
     .updated, .note { color: var(--muted); font-size: .85rem; text-align: center; margin: 0; }
     .message { text-align: center; color: var(--muted); padding: 40px 16px; }
     [hidden] { display: none !important; }
@@ -93,15 +95,12 @@
       <p class="desc" id="description"></p>
     </div>
 
-    <div class="actions" id="contact" hidden>
-      <a class="btn" id="callBtn">📞 Call</a>
-      <a class="btn wa" id="waBtn" target="_blank" rel="noopener">💬 WhatsApp</a>
-    </div>
+    <div id="contact" hidden></div>
 
     <p class="updated" id="updated"></p>
   </main>
 
-  <script src="firebase-config.js?v=9"></script>
-  <script src="shop.js?v=10"></script>
+  <script src="firebase-config.js?v=11"></script>
+  <script src="shop.js?v=11"></script>
 </body>
 </html>

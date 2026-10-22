@@ -46,6 +46,33 @@
   }
 
 
+  // One Call and one WhatsApp button for each phone number.
+  function renderContacts(numbers) {
+    const box = $('contact');
+    box.hidden = !numbers.length;
+    box.replaceChildren(...numbers.map(phone => {
+      const row = document.createElement('div');
+      const label = document.createElement('p');
+      label.className = 'number';
+      label.textContent = '📱 ' + phone;
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const call = document.createElement('a');
+      call.className = 'btn';
+      call.href = 'tel:' + String(phone).replace(/[^\d+]/g, '');
+      call.textContent = '📞 Call';
+      const wa = document.createElement('a');
+      wa.className = 'btn wa';
+      wa.target = '_blank';
+      wa.rel = 'noopener';
+      wa.href = 'https://wa.me/' + whatsappNumber(phone) + '?text=' + encodeURIComponent('Hello, I would like to buy eggs.');
+      wa.textContent = '💬 WhatsApp';
+      actions.append(call, wa);
+      row.append(label, actions);
+      return row;
+    }));
+  }
+
   function render() {
     if (!stock && !info) return;
     $('message').hidden = true;
@@ -59,12 +86,7 @@
       $('price').textContent = money(info.pricePerCrate);
       $('descCard').hidden = !info.description;
       $('description').textContent = info.description || '';
-      $('contact').hidden = !info.phone;
-      if (info.phone) {
-        $('callBtn').href = 'tel:' + String(info.phone).replace(/[^\d+]/g, '');
-        $('waBtn').href = 'https://wa.me/' + whatsappNumber(info.phone) +
-          '?text=' + encodeURIComponent('Hello, I would like to buy eggs.');
-      }
+      renderContacts([info.phone, info.phone2].filter(Boolean));
     }
 
     if (stock) {
