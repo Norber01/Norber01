@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=11">
 </head>
 <body class="logged-out">
   <!-- LOGIN -->
@@ -278,6 +278,7 @@
           <div class="field-wide"><button type="button" class="btn" id="copyShopLink">Share customer link</button></div>
           <label class="field"><span>Price per crate for customers (blank = default price)</span><input type="number" name="shopPrice" min="0" step="any" inputmode="decimal"></label>
           <label class="field"><span>Phone / WhatsApp number</span><input type="tel" name="shopPhone" placeholder="e.g. 0241234567"></label>
+          <label class="field"><span>Second phone / WhatsApp number (optional)</span><input type="tel" name="shopPhone2" placeholder="e.g. 0551234567"></label>
           <label class="field field-wide"><span>Description for customers</span><textarea name="shopDescription" rows="4" placeholder="e.g. Fresh farm eggs collected daily. Delivery available in town."></textarea></label>
         </fieldset>
         <div class="form-actions">
@@ -325,7 +326,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="firebase-config.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

@@ -43,6 +43,7 @@
       'Big, clean eggs with rich yellow yolks, perfect for your home, shop, bakery or chop bar.\n' +
       'Buy by the crate at a fair price. Call or WhatsApp us to order today!',
     shopPhone: '',
+    shopPhone2: '',
   };
 
   // Built-in logins so every device goes straight to the login page.
@@ -1562,6 +1563,7 @@
       pricePerCrate: shopPrice(),
       description: settings.shopDescription || '',
       phone: settings.shopPhone || '',
+      phone2: settings.shopPhone2 || '',
     };
     const infoJSON = stableJSON(info);
     if (infoJSON !== lastInfo) {
