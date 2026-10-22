@@ -104,8 +104,15 @@
       const emu = window.FIREBASE_EMULATOR;
       if (emu) db.useEmulator(emu.firestoreHost, emu.firestorePort);
       const fail = () => { if (!stock && !info) $('message').textContent = 'Egg availability is not available right now. Please try again later.'; };
-      db.collection('public').doc('stock').onSnapshot(d => { stock = d.exists ? d.data() : null; render(); }, fail);
-      db.collection('public').doc('info').onSnapshot(d => { info = d.exists ? d.data() : null; render(); }, fail);
+      let loaded = 0;
+      const got = () => {
+        loaded++;
+        // Both read fine but nothing has been saved yet: a manager hasn't opened the app since this page was added.
+        if (loaded >= 2 && !stock && !info) $('message').textContent = 'Egg details will appear here soon. Please check back later.';
+        render();
+      };
+      db.collection('public').doc('stock').onSnapshot(d => { stock = d.exists ? d.data() : null; got(); }, fail);
+      db.collection('public').doc('info').onSnapshot(d => { info = d.exists ? d.data() : null; got(); }, fail);
       setInterval(render, 60000); // keep "Updated … ago" fresh
     } catch (err) {
       $('message').textContent = 'Could not load. Check your internet connection and reload.';

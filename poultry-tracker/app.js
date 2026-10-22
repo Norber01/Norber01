@@ -39,7 +39,9 @@
     openingCash: 0,
     // Shown on the customer page (shop.html).
     shopPrice: 0,
-    shopDescription: '',
+    shopDescription: '🥚 Fresh farm eggs, collected every morning from our healthy, well-fed layers.\n' +
+      'Big, clean eggs with rich yellow yolks, perfect for your home, shop, bakery or chop bar.\n' +
+      'Buy by the crate at a fair price. Call or WhatsApp us to order today!',
     shopPhone: '',
   };
 
