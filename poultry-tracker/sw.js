@@ -1,7 +1,7 @@
 // Caches the app so it keeps working without internet.
-const CACHE = 'poultry-tracker-v6';
+const CACHE = 'poultry-tracker-v7';
 const FILES = [
-  './', 'index.html', 'style.css?v=6', 'app.js?v=6', 'firebase-config.js?v=6', 'manifest.json', 'icon.svg',
+  './', 'index.html', 'style.css?v=7', 'app.js?v=7', 'firebase-config.js?v=7', 'manifest.json', 'icon.svg',
   'vendor/firebase-app-compat.js?v=10.12.2', 'vendor/firebase-auth-compat.js?v=10.12.2', 'vendor/firebase-firestore-compat.js?v=10.12.2',
 ];
 

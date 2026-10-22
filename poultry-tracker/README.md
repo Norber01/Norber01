@@ -48,8 +48,10 @@ Everyone can comment on a day's record and on the Partners page. Each comment sh
   It starts with the contributions from the partners' sheet (Norbert, Ally, Frank, Isaac, Bernard).
 - **Contributions**: one row per date with one column per partner, as in the sheet. The general manager can
   add a new contribution when partners invest more, edit or delete one, and add or rename partners.
-- **Partners' income each month**: each month's profit (egg sales − feed − other expenses) is split by
-  each partner's share at the end of that month, so new investment raises a partner's share from that month on.
+- **Partners' income**: at the top of the Partners page, pick a month (for example October 2026) to see that
+  month's sales, costs, profit and each partner's income, or pick **Total income** for all months together.
+  Each month's profit (egg sales − feed − other expenses) is split by each partner's share at the end of that
+  month, so new investment raises a partner's share from that month on. A table below lists every month.
 
 ## Screens
 

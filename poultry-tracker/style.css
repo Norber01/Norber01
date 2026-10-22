@@ -408,3 +408,11 @@ html:not(.online-mode) [data-online] { display: none; }
 .sync.local { color: rgba(27,20,5,.7); }
 .sync.local::before { display: none; }
 .btn:disabled { opacity: .6; cursor: progress; }
+
+/* ---------- Partners' income ---------- */
+.income-pick { margin-bottom: 10px; }
+.income-pick select { width: auto; flex: 1; }
+#incomeCards { margin-bottom: 10px; }
+.bar-row .pos-text { color: var(--green); }
+.bar-row .neg-text { color: var(--red); }
+.bar-sub { color: var(--muted); font-size: .8rem; margin-top: 6px; }

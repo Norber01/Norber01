@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body class="logged-out">
   <!-- LOGIN -->
@@ -153,6 +153,12 @@
 
     <!-- PARTNERS -->
     <section id="view-partners" class="view">
+      <h2 class="section-title">Partners' income</h2>
+      <label class="field inline income-pick"><span>Show</span><select id="incomeMonth"></select></label>
+      <div class="cards" id="incomeCards"></div>
+      <div class="bars" id="incomeBars"></div>
+      <p class="hint">Each partner gets the month's profit (egg sales − feed − other expenses) times their share of contributions at the end of that month. "Total income" adds up every month.</p>
+
       <h2 class="section-title">Partners' share</h2>
       <div class="bars" id="shareBars"></div>
       <p class="hint">Each partner's share is their total contribution divided by everyone's total contributions.</p>
@@ -310,7 +316,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="firebase-config.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
