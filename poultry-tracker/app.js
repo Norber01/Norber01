@@ -37,6 +37,10 @@
     defaultBagPrice: 345,
     openingEggs: 0,
     openingCash: 0,
+    // Shown on the customer page (shop.html).
+    shopPrice: 0,
+    shopDescription: '',
+    shopPhone: '',
   };
 
   // Built-in logins so every device goes straight to the login page.
@@ -805,6 +809,7 @@
     renderRecords(rows);
     renderSummary(rows);
     renderPartners(rows);
+    if (online) publishShop(rows);
   }
 
   $('#recordsMonth').addEventListener('change', render);
@@ -1070,10 +1075,13 @@
   const settingsForm = $('#settingsForm');
 
   function fillSettings(fromLiveUpdate) {
-    if (fromLiveUpdate && settingsForm.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
+    $('#shopLink').textContent = shopLink();
+    $('#shopLink').href = shopLink();
+    if (fromLiveUpdate && settingsForm.contains(document.activeElement) && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
     Object.keys(DEFAULT_SETTINGS).forEach(k => {
       settingsForm.elements[k].value = settings[k];
     });
+    if (!num(settings.shopPrice)) settingsForm.elements.shopPrice.value = '';
   }
 
   settingsForm.addEventListener('submit', e => {
@@ -1519,6 +1527,60 @@
     el.textContent = text[syncState];
     el.className = 'sync ' + syncState;
   }
+
+  // ---------- Customer page ----------
+  //
+  // shop.html can be opened by anyone without logging in. It reads only two documents:
+  // public/stock (eggs available, kept up to date by both managers' phones) and
+  // public/info (price, description and contact, set by the general manager in Settings).
+
+  let lastStock = null;
+  let lastInfo = null;
+
+  function shopPrice() {
+    return num(settings.shopPrice) || num(settings.defaultCratePrice);
+  }
+
+  function publishShop(rows) {
+    if (!can('edit')) return;
+    const last = rows[rows.length - 1];
+    const stock = { eggs: Math.max(0, Math.round(last ? last.remaining : num(settings.openingEggs))), eggsPerCrate: num(settings.eggsPerCrate) || 30 };
+    const db = online.db;
+    // Customers don't need to see the page's own errors; the rules may not be published yet.
+    const quiet = err => console.warn('Customer page not updated:', err && err.code);
+    const stockJSON = stableJSON(stock);
+    if (stockJSON !== lastStock) {
+      lastStock = stockJSON;
+      db.collection('public').doc('stock').set(Object.assign({ updatedAt: Date.now() }, stock)).catch(quiet);
+    }
+    if (!can('gm')) return;
+    const info = {
+      farmName: settings.farmName || '',
+      currency: settings.currency || DEFAULT_SETTINGS.currency,
+      pricePerCrate: shopPrice(),
+      description: settings.shopDescription || '',
+      phone: settings.shopPhone || '',
+    };
+    const infoJSON = stableJSON(info);
+    if (infoJSON !== lastInfo) {
+      lastInfo = infoJSON;
+      db.collection('public').doc('info').set(info).catch(quiet);
+    }
+  }
+
+  function shopLink() {
+    return new URL('shop.html', location.href).href;
+  }
+
+  $('#copyShopLink').addEventListener('click', async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: 'Fresh eggs available', url: shopLink() });
+      else {
+        await navigator.clipboard.writeText(shopLink());
+        toast('Customer link copied');
+      }
+    } catch (e) { /* share sheet closed */ }
+  });
 
   // The first time the general manager logs in online, this device's records, partners,
   // contributions, comments and settings are uploaded so everyone starts with them.

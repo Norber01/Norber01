@@ -31,6 +31,18 @@ service cloud.firestore {
       allow write: if isGM();
     }
 
+    // Customer page (shop.html): anyone can read these two documents, and nothing else.
+    // Both managers' phones keep the eggs available up to date; the general manager sets the details.
+    match /public/stock {
+      allow read: if true;
+      allow write: if (isGM() || isSales())
+        && request.resource.data.keys().hasOnly(['eggs', 'eggsPerCrate', 'updatedAt']);
+    }
+    match /public/info {
+      allow read: if true;
+      allow write: if isGM();
+    }
+
     // Comments: everyone can comment as themselves and delete their own.
     // The general manager can delete any; the sales manager can delete comments on records
     // (needed when deleting a record).

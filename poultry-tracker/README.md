@@ -53,6 +53,18 @@ Everyone can comment on a day's record and on the Partners page. Each comment sh
   Each month's profit (egg sales − feed − other expenses) is split by each partner's share at the end of that
   month, so new investment raises a partner's share from that month on. A table below lists every month.
 
+## Customer page
+
+Share this link with customers. They don't log in, and they see only the eggs available, the price per crate,
+your description, and Call and WhatsApp buttons:
+
+`https://norber01.github.io/Norber01/poultry-tracker/shop.html`
+
+- The eggs available update by themselves whenever either manager saves a day.
+- The general manager sets the price, description and phone number in **Settings → Customer page**.
+- It needs Firebase and the latest [firestore.rules](firestore.rules) published (they let anyone read only the
+  customer page details, nothing else).
+
 ## Screens
 
 - **Home**: eggs in stock, cash on hand, the latest day's eggs, average eggs per day, and this month's totals and profit

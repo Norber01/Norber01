@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="logged-out">
   <!-- LOGIN -->
@@ -271,6 +271,15 @@
           <label class="field"><span>Eggs in stock before first record</span><input type="number" name="openingEggs" min="0" step="1" inputmode="numeric"></label>
           <label class="field"><span>Cash on hand before first record</span><input type="number" name="openingCash" step="any" inputmode="decimal"></label>
         </fieldset>
+        <fieldset>
+          <legend>Customer page</legend>
+          <p class="hint field-wide">Customers open this link without logging in. They see only the eggs available, the price per crate, and the details below.</p>
+          <p class="field-wide shop-link"><a id="shopLink" target="_blank" rel="noopener"></a></p>
+          <div class="field-wide"><button type="button" class="btn" id="copyShopLink">Share customer link</button></div>
+          <label class="field"><span>Price per crate for customers (blank = default price)</span><input type="number" name="shopPrice" min="0" step="any" inputmode="decimal"></label>
+          <label class="field"><span>Phone / WhatsApp number</span><input type="tel" name="shopPhone" placeholder="e.g. 0241234567"></label>
+          <label class="field field-wide"><span>Description for customers</span><textarea name="shopDescription" rows="4" placeholder="e.g. Fresh farm eggs collected daily. Delivery available in town."></textarea></label>
+        </fieldset>
         <div class="form-actions">
           <button type="submit" class="btn primary">Save settings</button>
         </div>
@@ -316,7 +325,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="firebase-config.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

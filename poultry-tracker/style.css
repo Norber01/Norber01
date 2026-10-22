@@ -416,3 +416,7 @@ html:not(.online-mode) [data-online] { display: none; }
 .bar-row .pos-text { color: var(--green); }
 .bar-row .neg-text { color: var(--red); }
 .bar-sub { color: var(--muted); font-size: .8rem; margin-top: 6px; }
+
+/* ---------- Customer page settings ---------- */
+.field-wide { grid-column: 1 / -1; margin: 0; }
+.shop-link a { color: var(--orange-strong); overflow-wrap: anywhere; font-weight: 600; }
