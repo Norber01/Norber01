@@ -91,6 +91,39 @@
     ].map((r, i) => ({ id: 'seed' + i, date: r[0], label: r[1], note: r[2], amounts: r[3], created: i })),
   };
 
+  // Days from the "sales sheet" (8–21 October 2026). They are added once: on this phone when
+  // working offline-only, or to the online database the next time the general manager logs in.
+  // Days that are already in the app (same date, eggs and crates sold) are skipped.
+  const SHEET_IMPORT_ID = 'sales-sheet-2026-10-21';
+  const SHEET_RECORDS = [
+    // date, eggs, price per crate, crates sold, feed bags, price per bag, note, other expense, amount, money added, giveaway
+    ['2026-10-08', 346, 40, 9.5, 0, 0, '', '', 0, 0, 48],
+    ['2026-10-09', 97, 40, 3, 3, 345, '700gh was added to the income generated from eggs to buy feed and other hygiene items',
+      'Other hygiene items', 165, 700, 15],
+    ['2026-10-10', 123, 40, 3, 0, 0, '', '', 0, 0, 15],
+    ['2026-10-11', 137, 40, 4, 0, 0, '', '', 0, 0, 20],
+    ['2026-10-12', 155, 40, 1, 0, 0, '', '', 0, 0, 5],
+    ['2026-10-13', 169, 40, 4, 0, 0, '', 'Town P.A announcement', 15, 0, 33],
+    ['2026-10-14', 177, 40, 0, 0, 0, '', '', 0, 0, 0],
+    ['2026-10-15', 198, 40, 2, 0, 0, '', 'fuel for bike', 40, 0, 10],
+    ['2026-10-16', 207, 40, 7, 0, 0, '', '', 0, 0, 25],
+    ['2026-10-17', 212, 30, 4, 3, 345, 'Gh60 for eggmax, gh50 for palm oil, and gh56 for TNT. (The sheet shows 4 crates sold for GH₵120.)',
+      'Eggmax, palm oil, and TNT', 166, 0, 20],
+    ['2026-10-18', 224, 40, 22, 0, 0, '', '', 0, 0, 60],
+    ['2026-10-19', 227, 40, 5, 0, 0, '', '', 0, 0, 3],
+    ['2026-10-20', 229, 40, 7.5, 0, 0, '', '', 0, 0, 4],
+    ['2026-10-20', 0, 45, 2, 0, 0, '', '', 0, 0, 0],
+    ['2026-10-21', 235, 40, 5.5, 0, 0, '', '', 0, 0, 3],
+  ].map((r, i) => ({
+    id: 'sheet-' + r[0] + '-' + i, date: r[0], eggs: r[1], cratePrice: r[2], cratesSold: r[3], feedBags: r[4], bagPrice: r[5],
+    note: r[6], expenseDesc: r[7], expenseAmt: r[8], cashAdded: r[9], giveaway: r[10], created: i,
+  }));
+
+  function sheetRowsMissingFrom(list) {
+    const same = (a, b) => a.date === b.date && num(a.eggs) === num(b.eggs) && num(a.cratesSold) === num(b.cratesSold);
+    return SHEET_RECORDS.filter(r => !list.some(x => x.id === r.id || same(x, r)));
+  }
+
   const NUMBER_FIELDS = ['eggs', 'giveaway', 'cratePrice', 'cratesSold', 'feedBags', 'bagPrice', 'expenseAmt', 'cashAdded'];
   const TEXT_FIELDS = ['date', 'note', 'expenseDesc'];
 
@@ -309,7 +342,7 @@
     $('#whoAmI').textContent = (session.name ? session.name + ' · ' : '') + ROLES[session.role].label;
     if (online) {
       startListeners();
-      uploadIfEmpty();
+      uploadIfEmpty().then(addSheetRowsOnline);
     }
     updateSyncStatus();
     fillSettings();
@@ -686,8 +719,10 @@
       '<tr><td>TOTAL</td>' + partners.map(p => '<td>' + fmt(all.byPartner[p.id]) + '</td>').join('') + '<td>' + fmt(all.total) + '</td></tr>' +
       '<tr class="share"><td>Share %</td>' + partners.map(p => '<td>' + pct(all.share[p.id]) + '</td>').join('') + '<td>' + (all.total ? '100.00%' : '') + '</td></tr>';
 
+    renderIncomeForMonth(rows);
+
     // Each partner's income per month.
-    $('#incomeTable thead').innerHTML = '<tr><th>Month</th><th>Profit</th>' + partners.map(p => '<th>' + esc(p.name) + '</th>').join('') + '</tr>';
+    $('#incomeTable thead').innerHTML = '<tr><th>Month</th><th>Profit to share</th>' + partners.map(p => '<th>' + esc(p.name) + '</th>').join('') + '</tr>';
     const byMonth = groupByMonth(rows);
     const months = Object.keys(byMonth).sort().reverse();
     const thisMonth = monthKey(todayISO());
@@ -705,12 +740,62 @@
       }).join('')
       : '<tr class="static"><td colspan="' + (partners.length + 2) + '" class="text" style="text-align:center;color:var(--muted)">Add daily records to see each partner\'s income.</td></tr>';
     $('#incomeTable tfoot').innerHTML = months.length
-      ? '<tr><td>All time</td><td>' + fmt(totals(rows).profit) + '</td>' + partners.map(p => '<td>' + fmt(earned[p.id]) + '</td>').join('') + '</tr>'
+      ? '<tr><td>Total income</td><td>' + fmt(totals(rows).profit) + '</td>' + partners.map(p => '<td>' + fmt(earned[p.id]) + '</td>').join('') + '</tr>'
       : '';
 
     renderComments('partners', $('#partnerComments'));
     renderPartnerNames();
   }
+
+  // Each partner's income for one month: that month's profit split by the shares at the end of the
+  // month. "All months" adds up every month's split, so it is each partner's total income.
+  function partnerIncome(rows, key) {
+    const byMonth = groupByMonth(rows);
+    const keys = key === 'all' ? Object.keys(byMonth) : (byMonth[key] ? [key] : []);
+    const income = {};
+    partnerData.partners.forEach(p => { income[p.id] = 0; });
+    let monthRows = [];
+    keys.forEach(k => {
+      const profit = totals(byMonth[k]).profit;
+      const c = contributions(lastDayOfMonth(k));
+      partnerData.partners.forEach(p => { income[p.id] += profit * c.share[p.id]; });
+      monthRows = monthRows.concat(byMonth[k]);
+    });
+    const shares = key === 'all' ? contributions() : contributions(lastDayOfMonth(key));
+    return { income, t: totals(monthRows), shares };
+  }
+
+  function renderIncomeForMonth(rows) {
+    const select = $('#incomeMonth');
+    const months = Array.from(new Set(rows.map(r => monthKey(r.date)))).sort().reverse();
+    const thisMonth = monthKey(todayISO());
+    const chosen = select.value || months[0] || 'all';
+    select.innerHTML = months.map(k => '<option value="' + k + '">' + esc(monthName(k)) + (k === thisMonth ? ' (so far)' : '') + '</option>').join('') +
+      '<option value="all">Total income (all months)</option>';
+    select.value = months.includes(chosen) || chosen === 'all' ? chosen : 'all';
+    const key = select.value;
+
+    if (!rows.length) {
+      $('#incomeCards').innerHTML = '';
+      $('#incomeBars').innerHTML = '<div class="empty">Add daily records to see each partner\'s income.</div>';
+      return;
+    }
+    const { income, t, shares } = partnerIncome(rows, key);
+    const label = key === 'all' ? 'all months' : monthName(key);
+    $('#incomeCards').innerHTML =
+      card('Sales income', money(t.sales), 'blue', label) +
+      card('Feed + other costs', money(t.feed + t.expenses), 'red') +
+      card('Profit to share', money(t.profit), t.profit < 0 ? 'red' : 'green', 'total income for partners');
+    $('#incomeBars').innerHTML = partnerData.partners.slice().sort((a, b) => income[b.id] - income[a.id]).map(p =>
+      '<div class="bar-row"><div class="top"><b>' + esc(p.name) + '</b><b class="' + (income[p.id] < 0 ? 'neg-text' : 'pos-text') + '">' +
+        esc(money(income[p.id])) + '</b></div>' +
+      '<div class="bar-track" role="img" aria-label="' + esc(p.name + ' ' + money(income[p.id])) + '"><div class="bar-fill" style="width:' +
+        (shares.share[p.id] * 100).toFixed(2) + '%"></div></div>' +
+      '<div class="bar-sub">' + (key === 'all' ? 'Current share ' : 'Share ') + pct(shares.share[p.id]) + '</div></div>'
+    ).join('');
+  }
+
+  $('#incomeMonth').addEventListener('change', render);
 
   function render() {
     const rows = compute(records);
@@ -1324,11 +1409,13 @@
   }
 
   function commitOps(ops) {
+    const commits = [];
     for (let i = 0; i < ops.length; i += 400) {
       const batch = online.db.batch();
       ops.slice(i, i + 400).forEach(op => (op.del ? batch.delete(op.ref) : batch.set(op.ref, op.data)));
-      batch.commit().catch(syncError);
+      commits.push(batch.commit().catch(syncError));
     }
+    return Promise.all(commits);
   }
 
   // Writes the documents in `list` that differ from the database and deletes the ones that are gone.
@@ -1467,13 +1554,44 @@
     ops.push({ ref: db.collection('meta').doc('settings'), data: clean(localCopy.settings) });
     ops.push({ ref: db.collection('meta').doc('partners'), data: clean({ partners: localCopy.partnerData.partners }) });
     localCopy = null;
-    commitOps(ops);
+    await commitOps(ops);
     toast('Records and partners are now online for everyone');
+  }
+
+  async function addSheetRowsOnline() {
+    if (!session || session.role !== 'gm') return;
+    const db = online.db;
+    let importsDoc, recordSnap;
+    try {
+      [importsDoc, recordSnap] = await Promise.all([
+        db.collection('meta').doc('imports').get({ source: 'server' }),
+        db.collection('records').get({ source: 'server' }),
+      ]);
+    } catch (e) {
+      return; // offline: try again next login
+    }
+    const done = importsDoc.exists ? importsDoc.data() : {};
+    if (done[SHEET_IMPORT_ID]) return;
+    const missing = sheetRowsMissingFrom(recordSnap.docs.map(d => d.data()));
+    const ops = missing.map(r => ({ ref: db.collection('records').doc(r.id), data: clean(r) }));
+    ops.push({ ref: db.collection('meta').doc('imports'), data: Object.assign({}, done, { [SHEET_IMPORT_ID]: Date.now() }) });
+    await commitOps(ops);
+    if (missing.length) toast('Added ' + missing.length + ' days from the sales sheet');
+  }
+
+  function addSheetRowsLocally() {
+    const done = load('poultry.imports.v1', {});
+    if (done[SHEET_IMPORT_ID]) return;
+    records = records.concat(sheetRowsMissingFrom(records).map(r => Object.assign({}, r)));
+    save(RECORDS_KEY, records);
+    done[SHEET_IMPORT_ID] = Date.now();
+    save('poultry.imports.v1', done);
   }
 
   // ---------- Start ----------
 
   if (!load(PARTNERS_KEY, null)) save(PARTNERS_KEY, partnerData);
+  if (!FIREBASE_CONFIG) addSheetRowsLocally();
 
   if (FIREBASE_CONFIG) {
     document.documentElement.classList.add('online-mode');
