@@ -69,9 +69,10 @@ your description, and Call and WhatsApp buttons:
 
 - **Home**: eggs in stock, cash on hand, the latest day's eggs, average eggs per day, and this month's totals and profit
 - **Records**: the full spreadsheet view, with every orange column; tap a row to open it, comment, or edit
-- **Add**: record a day and see the calculated totals before you save
+- **Add**: record a day (eggs, sales, feed, mortality and other money) and see the calculated totals before you save
 - **Partners**: shares, contributions and monthly income per partner
-- **Summary**: totals for each month and for all time
+- **Summary**: totals for each month and for all time, and a **financial statement** for any month (income statement,
+  cash summary, partners' share of profit, production and mortality) that anyone can print or save as a PDF
 - **Settings**: farm name, currency (GH₵ by default), eggs per crate, default prices, starting balances, number of birds (for laying rate), and backup/import
 
 ## Moving your Google Sheet in
