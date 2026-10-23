@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body class="logged-out">
   <!-- LOGIN -->
@@ -86,6 +86,7 @@
               <th>Income Left</th>
               <th>Eggs Giveaway</th>
               <th>Remaining Eggs</th>
+              <th>Mortality</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -131,6 +132,12 @@
           <legend>Feed</legend>
           <label class="field"><span>No. of feed bags bought</span><input type="number" name="feedBags" min="0" step="any" inputmode="decimal"></label>
           <label class="field"><span>Price per bag</span><input type="number" name="bagPrice" min="0" step="any" inputmode="decimal"></label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Mortality</legend>
+          <label class="field"><span>Birds that died</span><input type="number" name="mortality" min="0" step="1" inputmode="numeric"></label>
+          <label class="field"><span>Cause (if known)</span><input type="text" name="mortalityCause" placeholder="e.g. heat stress, disease, injury"></label>
         </fieldset>
 
         <fieldset>
@@ -241,6 +248,7 @@
               <th>Money Added</th>
               <th>Profit</th>
               <th>Eggs Giveaway</th>
+              <th>Mortality</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -248,6 +256,14 @@
         </table>
       </div>
       <p class="hint">Profit = sales income − feed cost − other expenses. Money added is not counted as profit.</p>
+
+      <h2 class="section-title">Financial statement</h2>
+      <div class="toolbar statement-bar">
+        <label class="field inline"><span>Month</span><select id="statementMonth"></select></label>
+        <button class="btn primary" id="printStatement">🖨️ Print / Save as PDF</button>
+      </div>
+      <p class="hint">Pick a month, tap the button, then choose <b>Save as PDF</b> as the printer to get a PDF file.</p>
+      <div id="statement" class="statement"></div>
     </section>
 
     <!-- SETTINGS (general manager only) -->
@@ -258,7 +274,7 @@
           <legend>Farm</legend>
           <label class="field"><span>Farm name</span><input type="text" name="farmName" placeholder="My Poultry Farm"></label>
           <label class="field"><span>Currency symbol</span><input type="text" name="currency" maxlength="6"></label>
-          <label class="field"><span>Number of laying birds (optional)</span><input type="number" name="birds" min="0" step="1" inputmode="numeric"></label>
+          <label class="field"><span>Number of birds at the start (optional, for birds alive and laying rate)</span><input type="number" name="birds" min="0" step="1" inputmode="numeric"></label>
           <label class="field"><span>Eggs per crate</span><input type="number" name="eggsPerCrate" min="1" step="1" inputmode="numeric"></label>
         </fieldset>
         <fieldset>
@@ -326,7 +342,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="firebase-config.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

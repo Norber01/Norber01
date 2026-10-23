@@ -131,8 +131,8 @@
     return SHEET_RECORDS.filter(r => !list.some(x => x.id === r.id || same(x, r)));
   }
 
-  const NUMBER_FIELDS = ['eggs', 'giveaway', 'cratePrice', 'cratesSold', 'feedBags', 'bagPrice', 'expenseAmt', 'cashAdded'];
-  const TEXT_FIELDS = ['date', 'note', 'expenseDesc'];
+  const NUMBER_FIELDS = ['eggs', 'giveaway', 'cratePrice', 'cratesSold', 'feedBags', 'bagPrice', 'expenseAmt', 'cashAdded', 'mortality'];
+  const TEXT_FIELDS = ['date', 'note', 'expenseDesc', 'mortalityCause'];
 
   // ---------- Storage ----------
 
@@ -430,6 +430,7 @@
     let cash = num(settings.openingCash);
     let monthIncome = 0;
     let currentMonth = null;
+    let deaths = 0;
 
     return sorted(list).map(r => {
       const month = monthKey(r.date);
@@ -443,7 +444,10 @@
       monthIncome += salesTotal;
       remaining += num(r.eggs) - num(r.cratesSold) * epc - num(r.giveaway);
       cash += salesTotal + num(r.cashAdded) - feedTotal - num(r.expenseAmt);
+      deaths += num(r.mortality);
       return Object.assign({}, r, {
+        // Birds alive after this day, when the starting number of birds is set in Settings.
+        birdsAlive: num(settings.birds) > 0 ? num(settings.birds) - deaths : null,
         crates,
         salesTotal,
         feedTotal,
@@ -455,7 +459,7 @@
   }
 
   function totals(rows) {
-    const t = { eggs: 0, cratesSold: 0, sales: 0, feed: 0, expenses: 0, cashAdded: 0, giveaway: 0, feedBags: 0 };
+    const t = { eggs: 0, cratesSold: 0, sales: 0, feed: 0, expenses: 0, cashAdded: 0, giveaway: 0, feedBags: 0, mortality: 0 };
     rows.forEach(r => {
       t.eggs += num(r.eggs);
       t.cratesSold += num(r.cratesSold);
@@ -465,6 +469,7 @@
       t.expenses += num(r.expenseAmt);
       t.cashAdded += num(r.cashAdded);
       t.giveaway += num(r.giveaway);
+      t.mortality += num(r.mortality);
     });
     t.profit = t.sales - t.feed - t.expenses;
     return t;
@@ -585,7 +590,7 @@
     html += card('Eggs in stock', fmt(stock, 0), stock < 0 ? 'red' : 'cyan', fmt(stock / epc) + ' crates');
     html += card('Income left', money(cash), cash < 0 ? 'red' : 'green', 'cash on hand');
     if (last) {
-      const extra = settings.birds > 0 ? 'Laying rate ' + fmt((num(last.eggs) / settings.birds) * 100, 1) + '%' : fmt(last.crates) + ' crates';
+      const extra = last.birdsAlive > 0 ? 'Laying rate ' + fmt((num(last.eggs) / last.birdsAlive) * 100, 1) + '%' : fmt(last.crates) + ' crates';
       html += card('Eggs on ' + showDate(last.date), fmt(num(last.eggs), 0), '', extra);
     }
     const week = rows.slice(-7);
@@ -606,7 +611,10 @@
       card('Sales income', money(m.sales), 'blue') +
       card('Feed cost', money(m.feed), 'red', fmt(m.feedBags) + ' bags') +
       card('Other expenses', money(m.expenses), 'red') +
-      card('Profit', money(m.profit), m.profit < 0 ? 'red' : 'green');
+      card('Profit', money(m.profit), m.profit < 0 ? 'red' : 'green') +
+      (last && last.birdsAlive !== null
+        ? card('Birds alive', fmt(last.birdsAlive, 0), '', fmt(m.mortality, 0) + ' died this month')
+        : card('Mortality', fmt(m.mortality, 0), m.mortality ? 'red' : '', 'birds died this month'));
 
     const recent = rows.slice(-7).reverse();
     $('#recentList').innerHTML = recent.length
@@ -637,7 +645,7 @@
     const tbody = $('#sheetTable tbody');
 
     if (!shown.length) {
-      tbody.innerHTML = '<tr class="static"><td colspan="17" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
+      tbody.innerHTML = '<tr class="static"><td colspan="18" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
       $('#sheetTable tfoot').innerHTML = '';
       return;
     }
@@ -661,6 +669,7 @@
         '<td class="' + (r.incomeLeft < 0 ? 'neg' : 'bold') + '">' + fmt(r.incomeLeft) + '</td>' +
         '<td>' + fmt(num(r.giveaway), 0) + '</td>' +
         '<td class="' + (r.remaining < 0 ? 'neg' : 'cyan') + '">' + fmt(r.remaining, 0) + '</td>' +
+        '<td class="red">' + blankIfZero(num(r.mortality), v => fmt(v, 0)) + '</td>' +
       '</tr>').join('');
 
     const t = totals(shown);
@@ -668,7 +677,8 @@
       '<tr><td>Total</td><td>' + fmt(t.eggs, 0) + '</td><td>' + fmt(t.eggs / (num(settings.eggsPerCrate) || 30)) + '</td><td></td>' +
       '<td>' + fmt(t.cratesSold) + '</td><td>' + fmt(t.sales) + '</td><td></td><td>' + fmt(t.feedBags) + '</td><td></td>' +
       '<td>' + fmt(t.feed) + '</td><td></td><td>' + blankIfZero(t.cashAdded, fmt) + '</td><td></td>' +
-      '<td class="red">' + fmt(t.expenses) + '</td><td></td><td>' + fmt(t.giveaway, 0) + '</td><td></td></tr>';
+      '<td class="red">' + fmt(t.expenses) + '</td><td></td><td>' + fmt(t.giveaway, 0) + '</td><td></td>' +
+      '<td class="red">' + fmt(t.mortality, 0) + '</td></tr>';
   }
 
   function renderSummary(rows) {
@@ -677,13 +687,118 @@
     const line = (label, t) =>
       '<td>' + esc(label) + '</td><td>' + fmt(t.eggs, 0) + '</td><td>' + fmt(t.cratesSold) + '</td>' +
       '<td class="blue">' + fmt(t.sales) + '</td><td class="red">' + fmt(t.feed) + '</td><td class="red">' + fmt(t.expenses) + '</td>' +
-      '<td>' + fmt(t.cashAdded) + '</td><td class="' + (t.profit < 0 ? 'neg' : 'bold') + '">' + fmt(t.profit) + '</td><td>' + fmt(t.giveaway, 0) + '</td>';
+      '<td>' + fmt(t.cashAdded) + '</td><td class="' + (t.profit < 0 ? 'neg' : 'bold') + '">' + fmt(t.profit) + '</td><td>' + fmt(t.giveaway, 0) + '</td>' +
+      '<td class="red">' + fmt(t.mortality, 0) + '</td>';
 
     $('#summaryTable tbody').innerHTML = keys.length
       ? keys.map(k => '<tr class="static">' + line(monthName(k), totals(byMonth[k])) + '</tr>').join('')
-      : '<tr class="static"><td colspan="9" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
+      : '<tr class="static"><td colspan="10" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
     $('#summaryTable tfoot').innerHTML = keys.length ? '<tr>' + line('All time', totals(rows)) + '</tr>' : '';
   }
+
+  // ---------- Financial statement (printable) ----------
+  //
+  // One month's (or all months') income statement, cash summary, partners' share of profit and
+  // production. "Print / Save as PDF" opens the phone's print screen, where "Save as PDF" makes the file.
+
+  function renderStatement(rows) {
+    const select = $('#statementMonth');
+    const months = Array.from(new Set(rows.map(r => monthKey(r.date)))).sort().reverse();
+    const chosen = select.value || months[0] || 'all';
+    select.innerHTML = months.map(k => '<option value="' + k + '">' + esc(monthName(k)) + '</option>').join('') +
+      '<option value="all">All months</option>';
+    select.value = months.includes(chosen) || chosen === 'all' ? chosen : 'all';
+    $('#printStatement').disabled = !rows.length;
+    $('#statement').innerHTML = rows.length ? statementHTML(rows, select.value)
+      : '<p class="st-empty">Add daily records to make a financial statement.</p>';
+  }
+
+  function statementHTML(rows, key) {
+    const inPeriod = key === 'all' ? rows : rows.filter(r => monthKey(r.date) === key);
+    const before = key === 'all' ? [] : rows.filter(r => r.date < key + '-01');
+    const prev = before[before.length - 1];
+    const last = inPeriod[inPeriod.length - 1];
+    const t = totals(inPeriod);
+    const epc = num(settings.eggsPerCrate) || 30;
+    const openingCash = prev ? prev.incomeLeft : num(settings.openingCash);
+    const openingEggs = prev ? prev.remaining : num(settings.openingEggs);
+    const period = key === 'all'
+      ? 'All months (' + showDate(rows[0].date) + ' to ' + showDate(rows[rows.length - 1].date) + ')'
+      : monthName(key) + (key === monthKey(todayISO()) ? ' (to date)' : '');
+    const m = v => esc(money(v));
+    const line = (label, value, cls) => '<tr class="' + (cls || '') + '"><td>' + label + '</td><td>' + value + '</td></tr>';
+    const head = label => '<tr class="st-group"><th colspan="2">' + label + '</th></tr>';
+
+    const otherExpenses = inPeriod.filter(r => num(r.expenseAmt));
+    const { income, shares } = partnerIncome(rows, key);
+    const days = inPeriod.length;
+
+    return '<div class="st-head">' +
+        '<h1>' + esc(settings.farmName || 'Poultry Farm') + '</h1>' +
+        '<h2>Financial Statement</h2>' +
+        '<p>For ' + esc(period) + '</p>' +
+        '<p class="st-small">Prepared ' + esc(new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })) +
+          (session ? ' by ' + esc((session.name ? session.name + ', ' : '') + ROLES[session.role].label) : '') + '</p>' +
+      '</div>' +
+
+      '<div class="st-sec"><h3>1. Income statement</h3>' +
+      '<table class="st-table">' +
+        head('Income') +
+        line('Egg sales (' + esc(fmt(t.cratesSold)) + ' crates)', m(t.sales)) +
+        line('<b>Total income</b>', '<b>' + m(t.sales) + '</b>', 'st-sub') +
+        head('Expenses') +
+        line('Feed (' + esc(fmt(t.feedBags)) + ' bags)', m(t.feed)) +
+        otherExpenses.map(r => line(esc(showDate(r.date) + ' · ' + (r.expenseDesc || 'Other expense')), m(num(r.expenseAmt)))).join('') +
+        line('<b>Total expenses</b>', '<b>' + m(t.feed + t.expenses) + '</b>', 'st-sub') +
+        line('<b>Net ' + (t.profit < 0 ? 'loss' : 'profit') + '</b>', '<b>' + m(t.profit) + '</b>', 'st-total') +
+      '</table></div>' +
+
+      '<div class="st-sec"><h3>2. Cash summary</h3>' +
+      '<table class="st-table">' +
+        line('Cash at the start', m(openingCash)) +
+        line('Add: egg sales', m(t.sales)) +
+        line('Add: money added to the business', m(t.cashAdded)) +
+        line('Less: feed', m(-t.feed)) +
+        line('Less: other expenses', m(-t.expenses)) +
+        line('<b>Cash at the end (income left)</b>', '<b>' + m(last.incomeLeft) + '</b>', 'st-total') +
+      '</table></div>' +
+
+      '<div class="st-sec"><h3>3. Partners\' share of ' + (t.profit < 0 ? 'loss' : 'profit') + '</h3>' +
+      '<table class="st-table st-partners">' +
+        '<tr class="st-group"><th>Partner</th><th>' + (key === 'all' ? 'Current share' : 'Share') + '</th><th>Amount</th></tr>' +
+        partnerData.partners.map(p => '<tr><td>' + esc(p.name) + '</td><td>' + pct(shares.share[p.id]) + '</td><td>' + m(income[p.id]) + '</td></tr>').join('') +
+        '<tr class="st-total"><td><b>Total</b></td><td></td><td><b>' + m(t.profit) + '</b></td></tr>' +
+      '</table></div>' +
+
+      '<div class="st-sec"><h3>4. Production</h3>' +
+      '<table class="st-table">' +
+        line('Days recorded', esc(fmt(days, 0))) +
+        line('Eggs collected', esc(fmt(t.eggs, 0) + ' (' + fmt(t.eggs / epc) + ' crates)')) +
+        line('Average eggs per day', esc(fmt(days ? t.eggs / days : 0, 0))) +
+        line('Eggs sold', esc(fmt(t.cratesSold * epc, 0) + ' (' + fmt(t.cratesSold) + ' crates)')) +
+        line('Eggs given away', esc(fmt(t.giveaway, 0))) +
+        line('Eggs in stock at the start', esc(fmt(openingEggs, 0))) +
+        line('Eggs in stock at the end', esc(fmt(last.remaining, 0))) +
+        line('Mortality (birds died)', esc(fmt(t.mortality, 0))) +
+        (last.birdsAlive !== null ? line('Birds alive at the end', esc(fmt(last.birdsAlive, 0))) : '') +
+      '</table></div>' +
+
+      '<div class="st-sign">' +
+        '<div><span></span>Prepared by</div>' +
+        '<div><span></span>Approved by</div>' +
+      '</div>';
+  }
+
+  $('#statementMonth').addEventListener('change', () => renderStatement(compute(records)));
+  $('#printStatement').addEventListener('click', () => {
+    renderStatement(compute(records));
+    const key = $('#statementMonth').value;
+    const old = document.title;
+    // The PDF's file name comes from the page title.
+    document.title = (settings.farmName || 'Poultry') + ' Financial Statement ' + (key === 'all' ? 'All months' : monthName(key));
+    window.print();
+    setTimeout(() => { document.title = old; }, 1000);
+  });
 
   function groupByMonth(rows) {
     const byMonth = {};
@@ -811,6 +926,7 @@
     renderDashboard(rows);
     renderRecords(rows);
     renderSummary(rows);
+    renderStatement(rows);
     renderPartners(rows);
     if (online) publishShop(rows);
   }
@@ -846,6 +962,9 @@
       item('Income left', money(r.incomeLeft)) +
       item('Eggs giveaway', fmt(num(r.giveaway), 0)) +
       item('Remaining eggs', fmt(r.remaining, 0), 'cyan') +
+      (num(r.mortality) ? item('Mortality (birds died)', fmt(num(r.mortality), 0), 'red') : '') +
+      (r.birdsAlive !== null ? item('Birds alive', fmt(r.birdsAlive, 0)) : '') +
+      long('Cause of death', r.mortalityCause) +
       long('Note', r.note);
     renderComments('record:' + id, $('#detailComments'));
     if (!refresh) go('detail');
@@ -1127,7 +1246,7 @@
   // ---------- CSV import / export ----------
 
   const CSV_HEADERS = ['Date', 'No. of Eggs', 'Total Crate', 'Price per Crate', 'No. of Crate Sold', 'Total', 'Income Generated',
-    'No. of Feed Bought', 'Price per Bag', 'Total', 'Note', 'Money Added', 'Other Expenses', 'Amount', 'Income Left', 'Eggs Giveaway', 'Remaining Eggs'];
+    'No. of Feed Bought', 'Price per Bag', 'Total', 'Note', 'Money Added', 'Other Expenses', 'Amount', 'Income Left', 'Eggs Giveaway', 'Remaining Eggs', 'Mortality', 'Cause of Death'];
 
   function csvCell(v) {
     const s = String(v == null ? '' : v);
@@ -1149,7 +1268,7 @@
     const lines = [CSV_HEADERS.map(csvCell).join(',')].concat(rows.map(r => [
       showDate(r.date), num(r.eggs), round(r.crates, 4), num(r.cratePrice), num(r.cratesSold), r.salesTotal, r.incomeGenerated,
       num(r.feedBags), num(r.bagPrice), r.feedTotal, r.note, num(r.cashAdded), r.expenseDesc, num(r.expenseAmt),
-      r.incomeLeft, num(r.giveaway), r.remaining,
+      r.incomeLeft, num(r.giveaway), r.remaining, num(r.mortality), r.mortalityCause,
     ].map(csvCell).join(',')));
     download('poultry-records-' + todayISO() + '.csv', '﻿' + lines.join('\r\n'), 'text/csv');
   });
@@ -1202,6 +1321,8 @@
     if (/^other expenses?/.test(n)) return 'expenseDesc';
     if (n === 'amount') return 'expenseAmt';
     if (/giveaway|give away/.test(n)) return 'giveaway';
+    if (/^(mortality|deaths?|dead birds)$/.test(n)) return 'mortality';
+    if (/^cause/.test(n)) return 'mortalityCause';
     return null;
   }
 
@@ -1214,7 +1335,7 @@
     let skipped = 0;
     const now = Date.now();
     table.slice(headerIdx + 1).forEach((cells, i) => {
-      const r = { id: uid(), created: now + i, note: '', expenseDesc: '' };
+      const r = { id: uid(), created: now + i, note: '', expenseDesc: '', mortalityCause: '' };
       NUMBER_FIELDS.forEach(f => { r[f] = 0; });
       map.forEach((field, col) => {
         if (!field) return;
