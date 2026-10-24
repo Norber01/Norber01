@@ -602,7 +602,6 @@
     }
     html += card('All-time sales', money(all.sales), 'blue');
     html += card('All-time costs', money(all.feed + all.expenses), 'red', 'feed + other expenses');
-    html += card('Partners\' capital', money(contributions().total), '', partnerData.partners.length + ' partners');
     $('#statCards').innerHTML = html;
 
     const thisMonth = monthKey(last ? last.date : todayISO());
@@ -822,6 +821,7 @@
     const partners = partnerData.partners;
     const all = contributions();
 
+    $('#capitalCards').innerHTML = card('Partners\' capital', money(all.total), '', partners.length + ' partners');
     $('#shareBars').innerHTML = partners.length
       ? partners.slice().sort((a, b) => all.byPartner[b.id] - all.byPartner[a.id]).map(p =>
         '<div class="bar-row"><div class="top"><b>' + esc(p.name) + '</b><span>' + esc(money(all.byPartner[p.id])) + ' · ' + pct(all.share[p.id]) + '</span></div>' +
