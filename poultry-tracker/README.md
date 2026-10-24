@@ -20,7 +20,7 @@ works out the totals for you.
 - **Income Generated** = running total of sales for the month
 - **Total (feed)** = feed bags × price per bag
 - **Income Left** = previous income left + sales + money added − feed − other expenses
-- **Remaining Eggs** = previous remaining + eggs collected − (crates sold × 30) − giveaway
+- **Remaining Eggs** = previous remaining + eggs collected − (crates sold × 30) − giveaway − cracked eggs
 
 ## Logins
 
@@ -69,7 +69,7 @@ your description, and Call and WhatsApp buttons:
 
 - **Home**: eggs in stock, cash on hand, the latest day's eggs, average eggs per day, and this month's totals and profit
 - **Records**: the full spreadsheet view, with every orange column; tap a row to open it, comment, or edit
-- **Add**: record a day (eggs, sales, feed, mortality and other money) and see the calculated totals before you save
+- **Add**: record a day (eggs, cracked eggs, sales, feed, mortality and other money) and see the calculated totals before you save
 - **Partners**: shares, contributions and monthly income per partner
 - **Summary**: totals for each month and for all time, and a **financial statement** for any month (income statement,
   cash summary, partners' share of profit, production and mortality) that anyone can print or save as a PDF

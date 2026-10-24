@@ -9,7 +9,7 @@
  *   Income Generated = running total of sales for the month
  *   Total (feed)     = feed bags × price per bag
  *   Income Left      = previous income left + sales + money added − feed − other expenses
- *   Remaining Eggs   = previous remaining + eggs collected − crates sold × eggs per crate − giveaway
+ *   Remaining Eggs   = previous remaining + eggs collected − crates sold × eggs per crate − giveaway − cracked
  *
  * Partners: each partner's share = their contributions / all contributions.
  * Each month's profit is split by the shares as they stand at the end of that month.
@@ -131,7 +131,7 @@
     return SHEET_RECORDS.filter(r => !list.some(x => x.id === r.id || same(x, r)));
   }
 
-  const NUMBER_FIELDS = ['eggs', 'giveaway', 'cratePrice', 'cratesSold', 'feedBags', 'bagPrice', 'expenseAmt', 'cashAdded', 'mortality'];
+  const NUMBER_FIELDS = ['eggs', 'giveaway', 'cratePrice', 'cratesSold', 'feedBags', 'bagPrice', 'expenseAmt', 'cashAdded', 'mortality', 'cracked'];
   const TEXT_FIELDS = ['date', 'note', 'expenseDesc', 'mortalityCause'];
 
   // ---------- Storage ----------
@@ -442,7 +442,8 @@
       const salesTotal = num(r.cratePrice) * num(r.cratesSold);
       const feedTotal = num(r.feedBags) * num(r.bagPrice);
       monthIncome += salesTotal;
-      remaining += num(r.eggs) - num(r.cratesSold) * epc - num(r.giveaway);
+      // Cracked eggs can't be sold, so they leave the stock like giveaways.
+      remaining += num(r.eggs) - num(r.cratesSold) * epc - num(r.giveaway) - num(r.cracked);
       cash += salesTotal + num(r.cashAdded) - feedTotal - num(r.expenseAmt);
       deaths += num(r.mortality);
       return Object.assign({}, r, {
@@ -459,7 +460,7 @@
   }
 
   function totals(rows) {
-    const t = { eggs: 0, cratesSold: 0, sales: 0, feed: 0, expenses: 0, cashAdded: 0, giveaway: 0, feedBags: 0, mortality: 0 };
+    const t = { eggs: 0, cratesSold: 0, sales: 0, feed: 0, expenses: 0, cashAdded: 0, giveaway: 0, feedBags: 0, mortality: 0, cracked: 0 };
     rows.forEach(r => {
       t.eggs += num(r.eggs);
       t.cratesSold += num(r.cratesSold);
@@ -469,6 +470,7 @@
       t.expenses += num(r.expenseAmt);
       t.cashAdded += num(r.cashAdded);
       t.giveaway += num(r.giveaway);
+      t.cracked += num(r.cracked);
       t.mortality += num(r.mortality);
     });
     t.profit = t.sales - t.feed - t.expenses;
@@ -611,6 +613,7 @@
       card('Sales income', money(m.sales), 'blue') +
       card('Feed cost', money(m.feed), 'red', fmt(m.feedBags) + ' bags') +
       card('Other expenses', money(m.expenses), 'red') +
+      card('Cracked eggs', fmt(m.cracked, 0), m.cracked ? 'red' : '', 'this month') +
       card('Profit', money(m.profit), m.profit < 0 ? 'red' : 'green') +
       (last && last.birdsAlive !== null
         ? card('Birds alive', fmt(last.birdsAlive, 0), '', fmt(m.mortality, 0) + ' died this month')
@@ -645,7 +648,7 @@
     const tbody = $('#sheetTable tbody');
 
     if (!shown.length) {
-      tbody.innerHTML = '<tr class="static"><td colspan="18" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
+      tbody.innerHTML = '<tr class="static"><td colspan="19" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
       $('#sheetTable tfoot').innerHTML = '';
       return;
     }
@@ -668,6 +671,7 @@
         '<td class="red">' + blankIfZero(num(r.expenseAmt), fmt) + '</td>' +
         '<td class="' + (r.incomeLeft < 0 ? 'neg' : 'bold') + '">' + fmt(r.incomeLeft) + '</td>' +
         '<td>' + fmt(num(r.giveaway), 0) + '</td>' +
+        '<td class="red">' + blankIfZero(num(r.cracked), v => fmt(v, 0)) + '</td>' +
         '<td class="' + (r.remaining < 0 ? 'neg' : 'cyan') + '">' + fmt(r.remaining, 0) + '</td>' +
         '<td class="red">' + blankIfZero(num(r.mortality), v => fmt(v, 0)) + '</td>' +
       '</tr>').join('');
@@ -677,7 +681,7 @@
       '<tr><td>Total</td><td>' + fmt(t.eggs, 0) + '</td><td>' + fmt(t.eggs / (num(settings.eggsPerCrate) || 30)) + '</td><td></td>' +
       '<td>' + fmt(t.cratesSold) + '</td><td>' + fmt(t.sales) + '</td><td></td><td>' + fmt(t.feedBags) + '</td><td></td>' +
       '<td>' + fmt(t.feed) + '</td><td></td><td>' + blankIfZero(t.cashAdded, fmt) + '</td><td></td>' +
-      '<td class="red">' + fmt(t.expenses) + '</td><td></td><td>' + fmt(t.giveaway, 0) + '</td><td></td>' +
+      '<td class="red">' + fmt(t.expenses) + '</td><td></td><td>' + fmt(t.giveaway, 0) + '</td><td class="red">' + fmt(t.cracked, 0) + '</td><td></td>' +
       '<td class="red">' + fmt(t.mortality, 0) + '</td></tr>';
   }
 
@@ -688,11 +692,11 @@
       '<td>' + esc(label) + '</td><td>' + fmt(t.eggs, 0) + '</td><td>' + fmt(t.cratesSold) + '</td>' +
       '<td class="blue">' + fmt(t.sales) + '</td><td class="red">' + fmt(t.feed) + '</td><td class="red">' + fmt(t.expenses) + '</td>' +
       '<td>' + fmt(t.cashAdded) + '</td><td class="' + (t.profit < 0 ? 'neg' : 'bold') + '">' + fmt(t.profit) + '</td><td>' + fmt(t.giveaway, 0) + '</td>' +
-      '<td class="red">' + fmt(t.mortality, 0) + '</td>';
+      '<td class="red">' + fmt(t.cracked, 0) + '</td><td class="red">' + fmt(t.mortality, 0) + '</td>';
 
     $('#summaryTable tbody').innerHTML = keys.length
       ? keys.map(k => '<tr class="static">' + line(monthName(k), totals(byMonth[k])) + '</tr>').join('')
-      : '<tr class="static"><td colspan="10" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
+      : '<tr class="static"><td colspan="11" class="text" style="text-align:center;color:var(--muted)">No records yet.</td></tr>';
     $('#summaryTable tfoot').innerHTML = keys.length ? '<tr>' + line('All time', totals(rows)) + '</tr>' : '';
   }
 
@@ -777,6 +781,7 @@
         line('Average eggs per day', esc(fmt(days ? t.eggs / days : 0, 0))) +
         line('Eggs sold', esc(fmt(t.cratesSold * epc, 0) + ' (' + fmt(t.cratesSold) + ' crates)')) +
         line('Eggs given away', esc(fmt(t.giveaway, 0))) +
+        line('Cracked eggs', esc(fmt(t.cracked, 0))) +
         line('Eggs in stock at the start', esc(fmt(openingEggs, 0))) +
         line('Eggs in stock at the end', esc(fmt(last.remaining, 0))) +
         line('Mortality (birds died)', esc(fmt(t.mortality, 0))) +
@@ -961,6 +966,7 @@
       (r.expenseDesc || num(r.expenseAmt) ? item(r.expenseDesc || 'Other expense', money(num(r.expenseAmt)), 'red') : '') +
       item('Income left', money(r.incomeLeft)) +
       item('Eggs giveaway', fmt(num(r.giveaway), 0)) +
+      (num(r.cracked) ? item('Cracked eggs', fmt(num(r.cracked), 0), 'red') : '') +
       item('Remaining eggs', fmt(r.remaining, 0), 'cyan') +
       (num(r.mortality) ? item('Mortality (birds died)', fmt(num(r.mortality), 0), 'red') : '') +
       (r.birdsAlive !== null ? item('Birds alive', fmt(r.birdsAlive, 0)) : '') +
@@ -1246,7 +1252,7 @@
   // ---------- CSV import / export ----------
 
   const CSV_HEADERS = ['Date', 'No. of Eggs', 'Total Crate', 'Price per Crate', 'No. of Crate Sold', 'Total', 'Income Generated',
-    'No. of Feed Bought', 'Price per Bag', 'Total', 'Note', 'Money Added', 'Other Expenses', 'Amount', 'Income Left', 'Eggs Giveaway', 'Remaining Eggs', 'Mortality', 'Cause of Death'];
+    'No. of Feed Bought', 'Price per Bag', 'Total', 'Note', 'Money Added', 'Other Expenses', 'Amount', 'Income Left', 'Eggs Giveaway', 'Cracked Eggs', 'Remaining Eggs', 'Mortality', 'Cause of Death'];
 
   function csvCell(v) {
     const s = String(v == null ? '' : v);
@@ -1268,7 +1274,7 @@
     const lines = [CSV_HEADERS.map(csvCell).join(',')].concat(rows.map(r => [
       showDate(r.date), num(r.eggs), round(r.crates, 4), num(r.cratePrice), num(r.cratesSold), r.salesTotal, r.incomeGenerated,
       num(r.feedBags), num(r.bagPrice), r.feedTotal, r.note, num(r.cashAdded), r.expenseDesc, num(r.expenseAmt),
-      r.incomeLeft, num(r.giveaway), r.remaining, num(r.mortality), r.mortalityCause,
+      r.incomeLeft, num(r.giveaway), num(r.cracked), r.remaining, num(r.mortality), r.mortalityCause,
     ].map(csvCell).join(',')));
     download('poultry-records-' + todayISO() + '.csv', '﻿' + lines.join('\r\n'), 'text/csv');
   });
@@ -1321,6 +1327,7 @@
     if (/^other expenses?/.test(n)) return 'expenseDesc';
     if (n === 'amount') return 'expenseAmt';
     if (/giveaway|give away/.test(n)) return 'giveaway';
+    if (/^(cracked|broken)/.test(n)) return 'cracked';
     if (/^(mortality|deaths?|dead birds)$/.test(n)) return 'mortality';
     if (/^cause/.test(n)) return 'mortalityCause';
     return null;

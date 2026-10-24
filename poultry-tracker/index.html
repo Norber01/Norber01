@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body class="logged-out">
   <!-- LOGIN -->
@@ -85,6 +85,7 @@
               <th>Amount</th>
               <th>Income Left</th>
               <th>Eggs Giveaway</th>
+              <th>Cracked Eggs</th>
               <th>Remaining Eggs</th>
               <th>Mortality</th>
             </tr>
@@ -120,6 +121,7 @@
           <label class="field"><span>Date</span><input type="date" name="date" required></label>
           <label class="field"><span>No. of eggs collected</span><input type="number" name="eggs" min="0" step="1" inputmode="numeric"></label>
           <label class="field"><span>Eggs giveaway</span><input type="number" name="giveaway" min="0" step="1" inputmode="numeric"></label>
+          <label class="field"><span>Cracked eggs</span><input type="number" name="cracked" min="0" step="1" inputmode="numeric"></label>
         </fieldset>
 
         <fieldset>
@@ -248,6 +250,7 @@
               <th>Money Added</th>
               <th>Profit</th>
               <th>Eggs Giveaway</th>
+              <th>Cracked Eggs</th>
               <th>Mortality</th>
             </tr>
           </thead>
@@ -342,7 +345,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="firebase-config.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="firebase-config.js?v=13"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
