@@ -461,3 +461,5 @@ html:not(.online-mode) [data-online] { display: none; }
   .st-table tr, .st-sign { break-inside: avoid; }
   .st-group th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+.cards.capital { margin-bottom: 10px; }
