@@ -1249,6 +1249,82 @@
     toast(ROLES[role].label + ' password changed' + (online ? ' on every phone' : ''));
   });
 
+  // ---------- Excel download ----------
+  //
+  // One .xlsx file with four sheets: daily records (one month or all), the monthly summary,
+  // partner contributions with shares, and each partner's income per month.
+
+  function excelWorkbook(key) {
+    const rows = compute(records);
+    const shown = key === 'all' ? rows : rows.filter(r => monthKey(r.date) === key);
+    const epc = num(settings.eggsPerCrate) || 30;
+    const partners = partnerData.partners;
+    const head = list => list.map(v => ({ v, style: 'head' }));
+    const bold = v => ({ v, style: 'bold' });
+    const amt = v => ({ v: round(v, 2), style: 'money' });
+    const boldAmt = v => ({ v: round(v, 2), style: 'boldMoney' });
+    const opt = (v, f) => (num(v) ? f(num(v)) : null);
+
+    const t = totals(shown);
+    const daily = [head(['Date', 'No. of Eggs', 'Total Crate', 'Price per Crate', 'No. of Crate Sold', 'Total Sales', 'Income Generated',
+      'No. of Feed Bought', 'Price per Bag', 'Total Feed', 'Note', 'Money Added', 'Other Expenses', 'Amount', 'Income Left',
+      'Eggs Giveaway', 'Cracked Eggs', 'Remaining Eggs', 'Mortality', 'Cause of Death'])]
+      .concat(shown.map(r => [
+        { v: r.date, style: 'date' }, num(r.eggs), round(r.crates, 2), amt(num(r.cratePrice)), num(r.cratesSold), amt(r.salesTotal),
+        amt(r.incomeGenerated), opt(r.feedBags, v => v), num(r.feedBags) ? amt(num(r.bagPrice)) : null, amt(r.feedTotal), r.note || null,
+        opt(r.cashAdded, amt), r.expenseDesc || null, opt(r.expenseAmt, amt), amt(r.incomeLeft), num(r.giveaway), num(r.cracked),
+        r.remaining, num(r.mortality), r.mortalityCause || null,
+      ]))
+      .concat([[bold('Total'), bold(t.eggs), bold(round(t.eggs / epc, 2)), null, bold(t.cratesSold), boldAmt(t.sales), null,
+        bold(t.feedBags), null, boldAmt(t.feed), null, boldAmt(t.cashAdded), null, boldAmt(t.expenses), null,
+        bold(t.giveaway), bold(t.cracked), null, bold(t.mortality), null]]);
+
+    const byMonth = groupByMonth(rows);
+    const months = Object.keys(byMonth).sort();
+    const monthLine = (label, m, style) => [style ? bold(label) : label]
+      .concat([m.eggs, m.cratesSold].map(v => (style ? bold(v) : v)))
+      .concat([m.sales, m.feed, m.expenses, m.cashAdded, m.profit].map(style ? boldAmt : amt))
+      .concat([m.giveaway, m.cracked, m.mortality].map(v => (style ? bold(v) : v)));
+    const summary = [head(['Month', 'Eggs Collected', 'Crates Sold', 'Sales Income', 'Feed Cost', 'Other Expenses', 'Money Added',
+      'Profit', 'Eggs Giveaway', 'Cracked Eggs', 'Mortality'])]
+      .concat(months.map(k => monthLine(monthName(k), totals(byMonth[k]))))
+      .concat([monthLine('All time', totals(rows), true)]);
+
+    const all = contributions();
+    const contrib = [head(['Date', 'Label / note'].concat(partners.map(p => p.name), ['Total']))]
+      .concat(sorted(partnerData.rows).map(r => [{ v: r.date, style: 'date' }, [r.label, r.note].filter(Boolean).join(' – ') || null]
+        .concat(partners.map(p => opt((r.amounts || {})[p.id], amt)), [amt(rowTotal(r))])))
+      .concat([[bold('TOTAL'), null].concat(partners.map(p => boldAmt(all.byPartner[p.id])), [boldAmt(all.total)])])
+      .concat([[bold('Share %'), null].concat(partners.map(p => ({ v: all.share[p.id], style: 'percent' })), [{ v: all.total ? 1 : 0, style: 'percent' }])]);
+
+    const income = [head(['Month', 'Profit to share'].concat(partners.map(p => p.name)))]
+      .concat(months.map(k => {
+        const pi = partnerIncome(rows, k);
+        return [monthName(k), amt(pi.t.profit)].concat(partners.map(p => amt(pi.income[p.id])));
+      }));
+    if (months.length) {
+      const pi = partnerIncome(rows, 'all');
+      income.push([bold('Total income'), boldAmt(pi.t.profit)].concat(partners.map(p => boldAmt(pi.income[p.id]))));
+    }
+
+    return makeXlsx([
+      { name: 'Daily records', rows: daily, widths: [12, 11, 11, 13, 15, 12, 15, 16, 12, 11, 36, 13, 26, 10, 12, 13, 12, 14, 10, 22] },
+      { name: 'Monthly summary', rows: summary, widths: [18, 14, 12, 13, 12, 14, 13, 12, 13, 12, 10] },
+      { name: 'Partner contributions', rows: contrib, widths: [12, 36].concat(partners.map(() => 12), [12]) },
+      { name: 'Partner income', rows: income, widths: [18, 15].concat(partners.map(() => 12)) },
+    ]);
+  }
+
+  function downloadExcel(key) {
+    if (!records.length) { toast('There are no records to download yet'); return; }
+    const name = (settings.farmName || 'Poultry') + ' records ' + (key === 'all' ? 'all months' : monthName(key));
+    download(name.replace(/[\\/:*?"<>|]/g, '') + '.xlsx', excelWorkbook(key), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    toast('Excel file downloaded');
+  }
+
+  $('#excelRecords').addEventListener('click', () => downloadExcel($('#recordsMonth').value || 'all'));
+  $('#excelSummary').addEventListener('click', () => downloadExcel('all'));
+
   // ---------- CSV import / export ----------
 
   const CSV_HEADERS = ['Date', 'No. of Eggs', 'Total Crate', 'Price per Crate', 'No. of Crate Sold', 'Total', 'Income Generated',
