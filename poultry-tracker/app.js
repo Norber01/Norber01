@@ -591,14 +591,20 @@
     let html = '';
     html += card('Eggs in stock', fmt(stock, 0), stock < 0 ? 'red' : 'cyan', fmt(stock / epc) + ' crates');
     html += card('Income left', money(cash), cash < 0 ? 'red' : 'green', 'cash on hand');
+    // A day can have several records (e.g. one for eggs collected, one for a later sale),
+    // so add up every record of a day instead of looking at one record.
+    const eggsByDay = {};
+    rows.forEach(r => { eggsByDay[r.date] = (eggsByDay[r.date] || 0) + num(r.eggs); });
+    const days = Object.keys(eggsByDay).sort();
     if (last) {
-      const extra = last.birdsAlive > 0 ? 'Laying rate ' + fmt((num(last.eggs) / last.birdsAlive) * 100, 1) + '%' : fmt(last.crates) + ' crates';
-      html += card('Eggs on ' + showDate(last.date), fmt(num(last.eggs), 0), '', extra);
+      const dayEggs = eggsByDay[last.date];
+      const extra = last.birdsAlive > 0 ? 'Laying rate ' + fmt((dayEggs / last.birdsAlive) * 100, 1) + '%' : fmt(dayEggs / epc) + ' crates';
+      html += card('Eggs on ' + showDate(last.date), fmt(dayEggs, 0), '', extra);
     }
-    const week = rows.slice(-7);
+    const week = days.slice(-7);
     if (week.length) {
-      const avg = week.reduce((s, r) => s + num(r.eggs), 0) / week.length;
-      html += card('Avg eggs / day', fmt(avg, 0), '', 'last ' + week.length + ' records');
+      const avg = week.reduce((s, d) => s + eggsByDay[d], 0) / week.length;
+      html += card('Avg eggs / day', fmt(avg, 0), '', 'last ' + week.length + (week.length === 1 ? ' day' : ' days'));
     }
     html += card('All-time sales', money(all.sales), 'blue');
     html += card('All-time costs', money(all.feed + all.expenses), 'red', 'feed + other expenses');
