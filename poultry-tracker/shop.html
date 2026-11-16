@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#c8931a">
   <meta name="description" content="Fresh farm eggs: see how many crates are available and the price per crate.">
   <title>Fresh Eggs</title>
@@ -21,6 +22,21 @@
       --green: #5fd38a;
       --red: #ff6b5e;
       --radius: 14px;
+      color-scheme: dark;
+    }
+    /* Light theme: used automatically when the phone is set to light mode. */
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #faf6ec;
+        --surface: #ffffff;
+        --line: #e2d7bc;
+        --text: #1d1a12;
+        --muted: #6b6352;
+        --orange-strong: #9a6c0c;
+        --green: #1d8a4a;
+        --red: #c4321f;
+        color-scheme: light;
+      }
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -100,7 +116,7 @@
     <p class="updated" id="updated"></p>
   </main>
 
-  <script src="firebase-config.js?v=16"></script>
-  <script src="shop.js?v=16"></script>
+  <script src="firebase-config.js?v=17"></script>
+  <script src="shop.js?v=17"></script>
 </body>
 </html>
