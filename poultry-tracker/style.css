@@ -12,7 +12,32 @@
   --red: #ff6b5e;         /* expenses */
   --cyan: #3fd6e0;        /* remaining eggs */
   --green: #5fd38a;
+  --row-alt: #1c180f;     /* every other row in the sheet */
+  --danger-line: #5a2a24;
+  --tabbar: #0f0d09;
   --radius: 12px;
+  color-scheme: dark;
+}
+
+/* Light theme: used automatically when the phone is set to light mode. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #faf6ec;
+    --surface: #ffffff;
+    --surface-2: #f3ead3;
+    --line: #e2d7bc;
+    --text: #1d1a12;
+    --muted: #6b6352;
+    --orange-strong: #9a6c0c;
+    --blue: #1f63d1;
+    --red: #c4321f;
+    --cyan: #0b7f8a;
+    --green: #1d8a4a;
+    --row-alt: #fbf6ea;
+    --danger-line: #f0c2bb;
+    --tabbar: #ffffff;
+    color-scheme: light;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -135,7 +160,7 @@ table.sheet {
   text-align: right;
   white-space: nowrap;
 }
-.sheet tbody tr:nth-child(even) td { background: #1c180f; }
+.sheet tbody tr:nth-child(even) td { background: var(--row-alt); }
 .sheet tbody tr { cursor: pointer; }
 .sheet tbody tr:active td { background: var(--surface-2); }
 .sheet th:first-child, .sheet td:first-child {
@@ -224,7 +249,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--orange); bo
   cursor: pointer;
 }
 .btn.primary { background: var(--orange); border-color: var(--orange); color: var(--orange-ink); }
-.btn.danger { color: var(--red); border-color: #5a2a24; }
+.btn.danger { color: var(--red); border-color: var(--danger-line); }
 .file-btn { display: inline-block; }
 
 /* ---------- Tab bar ---------- */
@@ -233,7 +258,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--orange); bo
   left: 0; right: 0; bottom: 0;
   z-index: 10;
   display: flex;
-  background: #0f0d09;
+  background: var(--tabbar);
   border-top: 2px solid var(--orange);
   padding-bottom: env(safe-area-inset-bottom);
 }
